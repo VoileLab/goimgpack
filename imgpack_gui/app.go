@@ -2,11 +2,7 @@ package imgpackgui
 
 import (
 	"fmt"
-	"goimgpack/internal/util"
-	"image"
 	"log"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -27,37 +23,7 @@ const appVersion = "v0.1"
 var appSize = fyne.NewSize(800, 600)
 
 var supportedImageExts = []string{".png", ".jpg", ".jpeg"}
-
-// Img stores all the information of an image
-type Img struct {
-	// uri is a local file URI
-	uri string
-
-	// basename is the base name of the image file
-	basename string
-
-	// img is the image.Image object of the image
-	img image.Image
-}
-
-func newImg(uri string) (*Img, error) {
-	f, err := os.Open(uri)
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-	defer f.Close()
-
-	img, _, err := image.Decode(f)
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-
-	return &Img{
-		uri:      uri,
-		basename: filepath.Base(uri),
-		img:      img,
-	}, nil
-}
+var supportedExportExts = []string{".zip", ".cbz"}
 
 type ImgpackApp struct {
 	fApp   fyne.App
@@ -84,8 +50,9 @@ func NewImgpackApp() *ImgpackApp {
 	}
 
 	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
 		widget.NewToolbarSeparator(),
+		widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction),
 		widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction),
 		widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction),
 		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
@@ -249,4 +216,41 @@ func (app *ImgpackApp) toolbarMoveDownAction() {
 	app.imgs[idx], app.imgs[idx+1] = app.imgs[idx+1], app.imgs[idx]
 	app.onSelectImageURI(idx)
 	app.imgListWidget.Refresh()
+}
+
+func (app *ImgpackApp) toolbarSaveAction() {
+	if len(app.imgs) == 0 {
+		app.stateBar.SetText("No image to save")
+		return
+	}
+
+	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, app.window)
+			return
+		}
+
+		if f == nil {
+			log.Println("Cancelled")
+			return
+		}
+
+		if f.URI() == nil {
+			log.Println("URI is nil")
+			return
+		}
+
+		uri := f.URI().Path()
+		err = saveImgsAsZip(app.imgs, uri)
+		if err != nil {
+			dialog.ShowError(err, app.window)
+			return
+		}
+
+		app.stateBar.SetText("Saved successfully")
+	}, app.window)
+
+	dlg.SetFileName("output.cbz")
+	dlg.SetFilter(storage.NewExtensionFileFilter(supportedExportExts))
+	dlg.Show()
 }
