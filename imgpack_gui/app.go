@@ -1,13 +1,13 @@
 package imgpackgui
 
 import (
-	"bytes"
 	"fmt"
 	"goimgpack/internal/util"
 	"image"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -67,6 +67,8 @@ type ImgpackApp struct {
 	imgListWidget *widget.List
 	imgShow       *canvas.Image
 
+	selectedImgIdx *int
+
 	imgs []*Img
 }
 
@@ -84,9 +86,10 @@ func NewImgpackApp() *ImgpackApp {
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction),
 		widget.NewToolbarSeparator(),
-		widget.NewToolbarAction(theme.ContentCutIcon(), func() {}),
-		widget.NewToolbarAction(theme.ContentCopyIcon(), func() {}),
-		widget.NewToolbarAction(theme.ContentPasteIcon(), func() {}),
+		widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction),
+		widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction),
+		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
+		widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			infoStr := fmt.Sprintf("%s %s", appTitle, appVersion)
@@ -109,8 +112,7 @@ func NewImgpackApp() *ImgpackApp {
 	imgListWidget.OnSelected = retApp.onSelectImageURI
 	retApp.imgListWidget = imgListWidget
 
-	imgShow := canvas.NewImageFromReader(
-		bytes.NewReader(imgPlaceholder), imgPlaceholderFilename)
+	imgShow := canvas.NewImageFromImage(imgPlaceholder)
 	imgShow.FillMode = canvas.ImageFillContain
 	retApp.imgShow = imgShow
 
@@ -158,7 +160,13 @@ func (app *ImgpackApp) toolbarAddAction() {
 			return
 		}
 
-		app.imgs = append(app.imgs, img)
+		if app.selectedImgIdx == nil {
+			app.imgs = append(app.imgs, img)
+		} else {
+			idx := *app.selectedImgIdx
+			app.imgs = slices.Insert(app.imgs, idx+1, img)
+		}
+
 		app.imgListWidget.Refresh()
 	}, app.window)
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
@@ -166,10 +174,79 @@ func (app *ImgpackApp) toolbarAddAction() {
 }
 
 func (app *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
+	app.selectedImgIdx = &id
 	img := app.imgs[id]
 	app.stateBar.SetText(img.uri)
 
 	app.imgShow.Resource = nil
 	app.imgShow.Image = img.img
 	app.imgShow.Refresh()
+}
+
+func (app *ImgpackApp) toolbarDeleteAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	idx := *app.selectedImgIdx
+	app.imgs = slices.Delete(app.imgs, idx, idx+1)
+	app.imgListWidget.Refresh()
+
+	if idx >= len(app.imgs) {
+		app.selectedImgIdx = nil
+		app.imgShow.Resource = nil
+		app.imgShow.Image = imgPlaceholder
+		app.imgShow.Refresh()
+	} else {
+		app.onSelectImageURI(idx)
+	}
+}
+
+func (app *ImgpackApp) toolbarDupAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	idx := *app.selectedImgIdx
+	img := app.imgs[idx]
+
+	// Here we mean to copy the img, maybe we should write a function to copy img struct
+	newImg, err := newImg(img.uri)
+	if err != nil {
+		dialog.ShowError(err, app.window)
+		return
+	}
+
+	app.imgs = slices.Insert(app.imgs, idx+1, newImg)
+	app.imgListWidget.Refresh()
+}
+
+func (app *ImgpackApp) toolbarMoveUpAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	idx := *app.selectedImgIdx
+	if idx == 0 {
+		return
+	}
+
+	app.imgs[idx], app.imgs[idx-1] = app.imgs[idx-1], app.imgs[idx]
+	app.onSelectImageURI(idx)
+	app.imgListWidget.Refresh()
+}
+
+func (app *ImgpackApp) toolbarMoveDownAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	idx := *app.selectedImgIdx
+	if idx == len(app.imgs)-1 {
+		return
+	}
+
+	app.imgs[idx], app.imgs[idx+1] = app.imgs[idx+1], app.imgs[idx]
+	app.onSelectImageURI(idx)
+	app.imgListWidget.Refresh()
 }

@@ -1,10 +1,20 @@
 package imgpackgui
 
 import (
+	"bytes"
 	_ "embed"
+	"image"
 )
 
 //go:embed img_placeholder.png
-var imgPlaceholder []byte
+var imgPlaceholderBs []byte
 
-const imgPlaceholderFilename = "img_placeholder.png"
+var imgPlaceholder image.Image
+
+func init() {
+	img, _, err := image.Decode(bytes.NewReader(imgPlaceholderBs))
+	if err != nil {
+		panic(err)
+	}
+	imgPlaceholder = img
+}
