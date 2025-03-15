@@ -3,6 +3,7 @@ package imgpackgui
 import (
 	_ "image/jpeg"
 	_ "image/png"
+	"log"
 
 	_ "golang.org/x/image/webp"
 
@@ -11,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/VoileLab/goimgpack/internal/util"
 )
@@ -25,6 +27,9 @@ type Img struct {
 
 	// img is the image.Image object of the image
 	img image.Image
+
+	// imgType is the type of the image
+	imgType string
 }
 
 func newImg(uri string) (*Img, error) {
@@ -34,7 +39,7 @@ func newImg(uri string) (*Img, error) {
 	}
 	defer f.Close()
 
-	img, _, err := image.Decode(f)
+	img, imgType, err := image.Decode(f)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
@@ -43,7 +48,67 @@ func newImg(uri string) (*Img, error) {
 		uri:      uri,
 		basename: filepath.Base(uri),
 		img:      img,
+		imgType:  imgType,
 	}, nil
+}
+
+func readImgs(filename string) ([]*Img, error) {
+	fileExt := filepath.Ext(filename)
+	if slices.Contains(supportedArchiveExts, fileExt) {
+		imgs, err := readImgsInZip(filename)
+		if err != nil {
+			return nil, util.Errorf("%w", err)
+		}
+		return imgs, nil
+	}
+
+	img, err := newImg(filename)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	return []*Img{img}, nil
+}
+
+func readImgsInZip(filename string) ([]*Img, error) {
+	r, err := zip.OpenReader(filename)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+	defer r.Close()
+
+	imgs := make([]*Img, 0, len(r.File))
+	for _, f := range r.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+
+		if !slices.Contains(supportedImageExts, filepath.Ext(f.Name)) {
+			continue
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		defer rc.Close()
+
+		img, imgType, err := image.Decode(rc)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		imgs = append(imgs, &Img{
+			uri:      f.Name,
+			basename: filepath.Base(f.Name),
+			img:      img,
+			imgType:  imgType,
+		})
+	}
+
+	return imgs, nil
 }
 
 func saveImgsAsZip(imgs []*Img, uri string) error {

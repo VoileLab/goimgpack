@@ -19,10 +19,10 @@ const appID = "com.mukyu.voile.imgpack"
 const appTitle = "Image Packer"
 const appVersion = "v0.1"
 
-var appSize = fyne.NewSize(800, 600)
+var appSize = fyne.NewSize(1000, 800)
 
 var supportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
-var supportedExportExts = []string{".zip", ".cbz"}
+var supportedArchiveExts = []string{".zip", ".cbz"}
 
 type ImgpackApp struct {
 	fApp   fyne.App
@@ -135,30 +135,33 @@ func (app *ImgpackApp) toolbarAddAction() {
 			return
 		}
 
-		uri := f.URI().Path()
-		img, err := newImg(uri)
+		filepath := f.URI().Path()
+		imgs, err := readImgs(filepath)
 		if err != nil {
 			dialog.ShowError(err, app.window)
 			return
 		}
 
 		if app.selectedImgIdx == nil {
-			app.imgs = append(app.imgs, img)
+			app.imgs = append(app.imgs, imgs...)
 		} else {
 			idx := *app.selectedImgIdx
-			app.imgs = slices.Insert(app.imgs, idx+1, img)
+			app.imgs = slices.Insert(app.imgs, idx+1, imgs...)
 		}
 
 		app.imgListWidget.Refresh()
 	}, app.window)
-	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
+	dlg.SetFilter(storage.NewExtensionFileFilter(append(supportedImageExts, supportedArchiveExts...)))
+	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
 
 func (app *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	app.selectedImgIdx = &id
 	img := app.imgs[id]
-	app.stateBar.SetText(img.uri)
+
+	stateText := fmt.Sprintf("Selected: %s - type: %s", img.basename, img.imgType)
+	app.stateBar.SetText(stateText)
 
 	app.imgShow.Resource = nil
 	app.imgShow.Image = img.img
@@ -266,6 +269,7 @@ func (app *ImgpackApp) toolbarSaveAction() {
 	}, app.window)
 
 	dlg.SetFileName("output.cbz")
-	dlg.SetFilter(storage.NewExtensionFileFilter(supportedExportExts))
+	dlg.SetFilter(storage.NewExtensionFileFilter(supportedArchiveExts))
+	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
