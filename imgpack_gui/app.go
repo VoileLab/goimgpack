@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"slices"
-	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -118,9 +117,7 @@ func (app *ImgpackApp) toolbarAddAction() {
 			return
 		}
 
-		uri := f.URI().String()
-		uri = strings.TrimPrefix(uri, "file://")
-
+		uri := f.URI().Path()
 		img, err := newImg(uri)
 		if err != nil {
 			dialog.ShowError(err, app.window)
