@@ -2,6 +2,7 @@ package imgpackgui
 
 import (
 	"bytes"
+	"fmt"
 	"goimgpack/internal/util"
 	"image"
 	"log"
@@ -18,6 +19,12 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
+
+const appID = "com.mukyu.voile.imgpack"
+const appTitle = "Image Packer"
+const appVersion = "v0.1"
+
+var appSize = fyne.NewSize(800, 600)
 
 var supportedImageExts = []string{".png", ".jpg", ".jpeg"}
 
@@ -64,9 +71,9 @@ type ImgpackApp struct {
 }
 
 func NewImgpackApp() *ImgpackApp {
-	fApp := app.NewWithID("com.mukyu.voile.imgpack")
-	window := fApp.NewWindow("Image Packer")
-	window.Resize(fyne.NewSize(800, 600))
+	fApp := app.NewWithID(appID)
+	window := fApp.NewWindow(appTitle)
+	window.Resize(appSize)
 	window.CenterOnScreen()
 
 	retApp := &ImgpackApp{
@@ -82,8 +89,8 @@ func NewImgpackApp() *ImgpackApp {
 		widget.NewToolbarAction(theme.ContentPasteIcon(), func() {}),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			// show messagebox
-			dialog := dialog.NewInformation("About", "Image Packer v0.1", window)
+			infoStr := fmt.Sprintf("%s %s", appTitle, appVersion)
+			dialog := dialog.NewInformation("About", infoStr, window)
 			dialog.Show()
 		}),
 	)
@@ -102,7 +109,8 @@ func NewImgpackApp() *ImgpackApp {
 	imgListWidget.OnSelected = retApp.onSelectImageURI
 	retApp.imgListWidget = imgListWidget
 
-	imgShow := canvas.NewImageFromReader(bytes.NewReader(imgPlaceholder), "img_placeholder.png")
+	imgShow := canvas.NewImageFromReader(
+		bytes.NewReader(imgPlaceholder), imgPlaceholderFilename)
 	imgShow.FillMode = canvas.ImageFillContain
 	retApp.imgShow = imgShow
 
@@ -125,7 +133,7 @@ func (app *ImgpackApp) Run() {
 }
 
 func (app *ImgpackApp) toolbarAddAction() {
-	dialog := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
+	dlg := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, app.window)
 			return
@@ -153,8 +161,8 @@ func (app *ImgpackApp) toolbarAddAction() {
 		app.imgs = append(app.imgs, img)
 		app.imgListWidget.Refresh()
 	}, app.window)
-	dialog.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
-	dialog.Show()
+	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
+	dlg.Show()
 }
 
 func (app *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
