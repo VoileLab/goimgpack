@@ -21,7 +21,7 @@ const appVersion = "v0.1"
 
 var appSize = fyne.NewSize(800, 600)
 
-var supportedImageExts = []string{".png", ".jpg", ".jpeg"}
+var supportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
 var supportedExportExts = []string{".zip", ".cbz"}
 
 type ImgpackApp struct {
@@ -47,6 +47,10 @@ func NewImgpackApp() *ImgpackApp {
 		fApp:   fApp,
 		window: window,
 	}
+
+	window.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
+		retApp.dropFiles(u)
+	})
 
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
@@ -98,6 +102,20 @@ func NewImgpackApp() *ImgpackApp {
 
 func (app *ImgpackApp) Run() {
 	app.window.ShowAndRun()
+}
+
+func (app *ImgpackApp) dropFiles(files []fyne.URI) {
+	for _, file := range files {
+		img, err := newImg(file.Path())
+		if err != nil {
+			dialog.ShowError(err, app.window)
+			continue
+		}
+
+		app.imgs = append(app.imgs, img)
+	}
+
+	app.imgListWidget.Refresh()
 }
 
 func (app *ImgpackApp) toolbarAddAction() {

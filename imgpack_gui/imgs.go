@@ -1,6 +1,11 @@
 package imgpackgui
 
 import (
+	_ "image/jpeg"
+	_ "image/png"
+
+	_ "golang.org/x/image/webp"
+
 	"archive/zip"
 	"image"
 	"io"
