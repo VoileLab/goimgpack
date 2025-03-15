@@ -2,11 +2,12 @@ package imgpackgui
 
 import (
 	"archive/zip"
-	"goimgpack/internal/util"
 	"image"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/VoileLab/goimgpack/internal/util"
 )
 
 // Img stores all the information of an image

@@ -1,4 +1,4 @@
-module goimgpack
+module github.com/VoileLab/goimgpack
 
 go 1.24.1
 
