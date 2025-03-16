@@ -10,7 +10,6 @@ import (
 	"archive/zip"
 	"image"
 	"io"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,7 +20,7 @@ import (
 
 // Img stores all the information of an image
 type Img struct {
-	// filename is the base name of the image file
+	// filename is the base name of the image file without the extension
 	filename string
 
 	// img is the image.Image object of the image
@@ -46,6 +45,9 @@ func newImg(r io.Reader, filename string) (*Img, error) {
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
+
+	// remove ext of filename
+	filename = filename[:len(filename)-len(filepath.Ext(filename))]
 
 	return &Img{
 		filename: filename,
@@ -99,22 +101,16 @@ func readImgsInZip(filename string) ([]*Img, error) {
 
 		rc, err := f.Open()
 		if err != nil {
-			log.Println(err)
-			continue
+			return nil, util.Errorf("%w", err)
 		}
 		defer rc.Close()
 
-		img, imgType, err := image.Decode(rc)
+		img, err := newImg(rc, f.Name)
 		if err != nil {
-			log.Println(err)
-			continue
+			return nil, util.Errorf("%w", err)
 		}
 
-		imgs = append(imgs, &Img{
-			filename: filepath.Base(f.Name),
-			img:      img,
-			imgType:  imgType,
-		})
+		imgs = append(imgs, img)
 	}
 
 	return imgs, nil
@@ -132,7 +128,7 @@ func saveImgsAsZip(imgs []*Img, filepath string, prependDigit bool) error {
 
 	imgLenDigits := util.CountDigits(len(imgs))
 	for i, img := range imgs {
-		filename := img.filename
+		filename := img.filename + ".jpg"
 		if prependDigit {
 			filename = util.PaddingZero(i, imgLenDigits) + "_" + filename
 		}
