@@ -65,6 +65,8 @@ func NewImgpackApp() *ImgpackApp {
 		retApp.dropFiles(u)
 	})
 
+	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
+
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
 		widget.NewToolbarSeparator(),
@@ -146,6 +148,25 @@ func (app *ImgpackApp) dropFiles(files []fyne.URI) {
 	}
 
 	app.imgListWidget.Refresh()
+}
+
+func (app *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
+	switch e.Name {
+	case fyne.KeyUp:
+		if app.selectedImgIdx != nil {
+			idx := *app.selectedImgIdx
+			if idx > 0 {
+				app.imgListWidget.Select(idx - 1)
+			}
+		}
+	case fyne.KeyDown:
+		if app.selectedImgIdx != nil {
+			idx := *app.selectedImgIdx
+			if idx < len(app.imgs)-1 {
+				app.imgListWidget.Select(idx + 1)
+			}
+		}
+	}
 }
 
 func (app *ImgpackApp) toolbarAddAction() {
