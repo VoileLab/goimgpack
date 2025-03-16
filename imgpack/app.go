@@ -15,7 +15,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-const appID = "com.mukyu.voile.imgpack"
+const appID = "com.github.voile.goimgpack"
 const appTitle = "Image Packer"
 const appDescription = "A tool to pack images into an archive file"
 
