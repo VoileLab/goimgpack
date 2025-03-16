@@ -4,6 +4,7 @@ import (
 	"image/jpeg"
 	_ "image/jpeg"
 	_ "image/png"
+	"strings"
 
 	_ "golang.org/x/image/webp"
 
@@ -47,7 +48,7 @@ func newImg(r io.Reader, filename string) (*Img, error) {
 	}
 
 	// remove ext of filename
-	filename = filename[:len(filename)-len(filepath.Ext(filename))]
+	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 
 	return &Img{
 		filename: filename,
