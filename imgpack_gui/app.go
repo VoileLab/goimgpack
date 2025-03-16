@@ -25,8 +25,9 @@ var supportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
 var supportedArchiveExts = []string{".zip", ".cbz"}
 
 type ImgpackApp struct {
-	fApp   fyne.App
-	window fyne.Window
+	fApp             fyne.App
+	mainWindow       fyne.Window
+	preferenceWindow fyne.Window
 
 	stateBar      *widget.Label
 	imgListWidget *widget.List
@@ -39,16 +40,26 @@ type ImgpackApp struct {
 
 func NewImgpackApp() *ImgpackApp {
 	fApp := app.NewWithID(appID)
-	window := fApp.NewWindow(appTitle)
-	window.Resize(appSize)
-	window.CenterOnScreen()
+
+	mainWindow := fApp.NewWindow(appTitle)
+	mainWindow.Resize(appSize)
+	mainWindow.CenterOnScreen()
+
+	preferenceWindow := fApp.NewWindow("Preferences")
+	preferenceWindow.Resize(fyne.NewSize(400, 300))
+	preferenceWindow.SetFixedSize(true)
+	preferenceWindow.CenterOnScreen()
+	preferenceWindow.SetCloseIntercept(func() {
+		preferenceWindow.Hide()
+	})
 
 	retApp := &ImgpackApp{
-		fApp:   fApp,
-		window: window,
+		fApp:             fApp,
+		mainWindow:       mainWindow,
+		preferenceWindow: preferenceWindow,
 	}
 
-	window.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
+	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
 		retApp.dropFiles(u)
 	})
 
@@ -61,9 +72,12 @@ func NewImgpackApp() *ImgpackApp {
 		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
 		widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction),
 		widget.NewToolbarSpacer(),
+		widget.NewToolbarAction(theme.SettingsIcon(), func() {
+			retApp.preferenceWindow.Show()
+		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			infoStr := fmt.Sprintf("%s %s", appTitle, appVersion)
-			dialog := dialog.NewInformation("About", infoStr, window)
+			dialog := dialog.NewInformation("About", infoStr, mainWindow)
 			dialog.Show()
 		}),
 	)
@@ -95,20 +109,34 @@ func NewImgpackApp() *ImgpackApp {
 	content := container.NewBorder(toolbar,
 		stateBar, nil, nil, hSplit)
 
-	window.SetContent(content)
+	mainWindow.SetContent(content)
+
+	addDigitCheck := widget.NewCheck("Add digit to filename", func(b bool) {
+		fApp.Preferences().SetBool("add_digit", b)
+	})
+	addDigitCheck.SetChecked(fApp.Preferences().Bool("add_digit"))
+
+	prefBody := container.NewVBox(
+		addDigitCheck,
+	)
+
+	preferenceWindow.SetContent(container.NewBorder(nil,
+		widget.NewButton("Close", func() {
+			retApp.preferenceWindow.Hide()
+		}), nil, nil, prefBody))
 
 	return retApp
 }
 
 func (app *ImgpackApp) Run() {
-	app.window.ShowAndRun()
+	app.mainWindow.ShowAndRun()
 }
 
 func (app *ImgpackApp) dropFiles(files []fyne.URI) {
 	for _, file := range files {
 		img, err := newImgByFilepath(file.Path())
 		if err != nil {
-			dialog.ShowError(err, app.window)
+			dialog.ShowError(err, app.mainWindow)
 			continue
 		}
 
@@ -121,7 +149,7 @@ func (app *ImgpackApp) dropFiles(files []fyne.URI) {
 func (app *ImgpackApp) toolbarAddAction() {
 	dlg := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, app.window)
+			dialog.ShowError(err, app.mainWindow)
 			return
 		}
 
@@ -138,7 +166,7 @@ func (app *ImgpackApp) toolbarAddAction() {
 		filepath := f.URI().Path()
 		imgs, err := readImgs(filepath)
 		if err != nil {
-			dialog.ShowError(err, app.window)
+			dialog.ShowError(err, app.mainWindow)
 			return
 		}
 
@@ -150,7 +178,7 @@ func (app *ImgpackApp) toolbarAddAction() {
 		}
 
 		app.imgListWidget.Refresh()
-	}, app.window)
+	}, app.mainWindow)
 	dlg.SetFilter(storage.NewExtensionFileFilter(append(supportedImageExts, supportedArchiveExts...)))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
@@ -239,7 +267,7 @@ func (app *ImgpackApp) toolbarSaveAction() {
 
 	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, app.window)
+			dialog.ShowError(err, app.mainWindow)
 			return
 		}
 
@@ -254,14 +282,14 @@ func (app *ImgpackApp) toolbarSaveAction() {
 		}
 
 		filepath := f.URI().Path()
-		err = saveImgsAsZip(app.imgs, filepath)
+		err = saveImgsAsZip(app.imgs, filepath, app.fApp.Preferences().Bool("add_digit"))
 		if err != nil {
-			dialog.ShowError(err, app.window)
+			dialog.ShowError(err, app.mainWindow)
 			return
 		}
 
 		app.stateBar.SetText("Saved successfully")
-	}, app.window)
+	}, app.mainWindow)
 
 	dlg.SetFileName("output.cbz")
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedArchiveExts))

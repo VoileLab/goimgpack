@@ -120,7 +120,7 @@ func readImgsInZip(filename string) ([]*Img, error) {
 	return imgs, nil
 }
 
-func saveImgsAsZip(imgs []*Img, filepath string) error {
+func saveImgsAsZip(imgs []*Img, filepath string, prependDigit bool) error {
 	zipFile, err := os.Create(filepath)
 	if err != nil {
 		return util.Errorf("%w", err)
@@ -132,8 +132,11 @@ func saveImgsAsZip(imgs []*Img, filepath string) error {
 
 	imgLenDigits := util.CountDigits(len(imgs))
 	for i, img := range imgs {
-		prefix := util.PaddingZero(i, imgLenDigits) + "_"
-		imgFile, err := zipWriter.Create(prefix + img.filename)
+		filename := img.filename
+		if prependDigit {
+			filename = util.PaddingZero(i, imgLenDigits) + "_" + filename
+		}
+		imgFile, err := zipWriter.Create(filename)
 		if err != nil {
 			return util.Errorf("%w", err)
 		}
