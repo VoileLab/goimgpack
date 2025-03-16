@@ -1,9 +1,11 @@
 package imgpack
 
 import (
+	"fmt"
 	"image/jpeg"
 	_ "image/jpeg"
 	_ "image/png"
+	"maps"
 	"strings"
 
 	_ "golang.org/x/image/webp"
@@ -16,7 +18,11 @@ import (
 	"path/filepath"
 	"slices"
 
+	"bytes"
+
 	"github.com/VoileLab/goimgpack/internal/util"
+	"github.com/pdfcpu/pdfcpu/pkg/api"
+	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
 // Img stores all the information of an image
@@ -69,6 +75,14 @@ func readImgs(filename string) ([]*Img, error) {
 	fileExt := filepath.Ext(filename)
 	if slices.Contains(supportedArchiveExts, fileExt) {
 		imgs, err := readImgsInZip(filename)
+		if err != nil {
+			return nil, util.Errorf("%w", err)
+		}
+		return imgs, nil
+	}
+
+	if fileExt == ".pdf" {
+		imgs, err := readImgsInPDF(filename)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
@@ -145,4 +159,70 @@ func saveImgsAsZip(imgs []*Img, filepath string, prependDigit bool) error {
 	}
 
 	return nil
+}
+
+func readImgsInPDF(filename string) ([]*Img, error) {
+	conf := model.NewDefaultConfiguration()
+	conf.ValidationMode = model.ValidationRelaxed
+
+	pdfFile, err := os.Open(filename)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+	defer pdfFile.Close()
+
+	pdfBuf := new(bytes.Buffer)
+	_, err = io.Copy(pdfBuf, pdfFile)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	pdfReader := bytes.NewReader(pdfBuf.Bytes())
+
+	allPages, err := api.PageCount(pdfReader, conf)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	allPagesStr := make([]string, allPages)
+	for i := range allPages {
+		allPagesStr[i] = fmt.Sprintf("%d", i+1)
+	}
+
+	imgsInPDF, err := api.ExtractImagesRaw(pdfReader, allPagesStr, conf)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	jdxMax := 0
+	for _, imgMap := range imgsInPDF {
+		for jdx := range imgMap {
+			jdxMax = max(jdxMax, jdx)
+		}
+	}
+	jdxMaxDigits := util.CountDigits(jdxMax)
+
+	imgsMap := make(map[string]*Img)
+	for idx, imgMap := range imgsInPDF {
+		for jdx, imgReader := range imgMap {
+			filename := fmt.Sprintf("%s_%d", util.PaddingZero(jdx, jdxMaxDigits), idx)
+
+			img, err := newImg(imgReader, filename)
+			if err != nil {
+				return nil, util.Errorf("%w", err)
+			}
+
+			imgsMap[filename] = img
+		}
+	}
+
+	imgsKeys := slices.Collect(maps.Keys(imgsMap))
+	slices.Sort(imgsKeys)
+
+	imgs := make([]*Img, len(imgsKeys))
+	for i, key := range imgsKeys {
+		imgs[i] = imgsMap[key]
+	}
+
+	return imgs, nil
 }

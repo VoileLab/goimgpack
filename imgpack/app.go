@@ -23,6 +23,8 @@ var appSize = fyne.NewSize(1000, 800)
 
 var supportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
 var supportedArchiveExts = []string{".zip", ".cbz"}
+var supportedPDFExts = []string{".pdf"}
+var supportedAddExts = slices.Concat(supportedImageExts, supportedArchiveExts, supportedPDFExts)
 
 type ImgpackApp struct {
 	fApp             fyne.App
@@ -179,7 +181,7 @@ func (app *ImgpackApp) toolbarAddAction() {
 
 		app.imgListWidget.Refresh()
 	}, app.mainWindow)
-	dlg.SetFilter(storage.NewExtensionFileFilter(append(supportedImageExts, supportedArchiveExts...)))
+	dlg.SetFilter(storage.NewExtensionFileFilter(supportedAddExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
