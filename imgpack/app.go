@@ -76,6 +76,7 @@ func NewImgpackApp() *ImgpackApp {
 		widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction),
 		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
 		widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction),
+		widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
 			retApp.preferenceWindow.Show()
@@ -222,6 +223,44 @@ func (app *ImgpackApp) toolbarAddAction() {
 		app.imgListWidget.Refresh()
 	}, app.mainWindow)
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedAddExts))
+	dlg.Resize(fyne.NewSize(600, 600))
+	dlg.Show()
+}
+
+func (app *ImgpackApp) toolbarDownloadAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	img := app.imgs[*app.selectedImgIdx]
+	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, app.mainWindow)
+			return
+		}
+
+		if f == nil {
+			log.Println("Cancelled")
+			return
+		}
+
+		if f.URI() == nil {
+			log.Println("URI is nil")
+			return
+		}
+
+		filepath := f.URI().Path()
+		err = saveImg(img, filepath)
+		if err != nil {
+			dialog.ShowError(err, app.mainWindow)
+			return
+		}
+
+		app.stateBar.SetText("Saved successfully")
+	}, app.mainWindow)
+
+	dlg.SetFileName(img.filename + ".jpg")
+	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
