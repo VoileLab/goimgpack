@@ -76,7 +76,7 @@ func NewImgpackApp() *ImgpackApp {
 			return widget.NewLabel("Item")
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(retApp.imgs[i].basename)
+			o.(*widget.Label).SetText(retApp.imgs[i].filename)
 		},
 	)
 	imgListWidget.OnSelected = retApp.onSelectImageURI
@@ -106,7 +106,7 @@ func (app *ImgpackApp) Run() {
 
 func (app *ImgpackApp) dropFiles(files []fyne.URI) {
 	for _, file := range files {
-		img, err := newImg(file.Path())
+		img, err := newImgByFilepath(file.Path())
 		if err != nil {
 			dialog.ShowError(err, app.window)
 			continue
@@ -160,7 +160,7 @@ func (app *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	app.selectedImgIdx = &id
 	img := app.imgs[id]
 
-	stateText := fmt.Sprintf("Selected: %s - type: %s", img.basename, img.imgType)
+	stateText := fmt.Sprintf("Selected: %s - type: %s", img.filename, img.imgType)
 	app.stateBar.SetText(stateText)
 
 	app.imgShow.Resource = nil
@@ -195,12 +195,7 @@ func (app *ImgpackApp) toolbarDupAction() {
 	idx := *app.selectedImgIdx
 	img := app.imgs[idx]
 
-	// Here we mean to copy the img, maybe we should write a function to copy img struct
-	newImg, err := newImg(img.uri)
-	if err != nil {
-		dialog.ShowError(err, app.window)
-		return
-	}
+	newImg := img.Clone()
 
 	app.imgs = slices.Insert(app.imgs, idx+1, newImg)
 	app.imgListWidget.Refresh()
@@ -258,8 +253,8 @@ func (app *ImgpackApp) toolbarSaveAction() {
 			return
 		}
 
-		uri := f.URI().Path()
-		err = saveImgsAsZip(app.imgs, uri)
+		filepath := f.URI().Path()
+		err = saveImgsAsZip(app.imgs, filepath)
 		if err != nil {
 			dialog.ShowError(err, app.window)
 			return

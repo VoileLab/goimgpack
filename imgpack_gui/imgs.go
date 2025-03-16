@@ -1,16 +1,18 @@
 package imgpackgui
 
 import (
+	"image/jpeg"
 	_ "image/jpeg"
 	_ "image/png"
-	"log"
 
 	_ "golang.org/x/image/webp"
 
 	"archive/zip"
 	"image"
 	"io"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 
@@ -19,11 +21,8 @@ import (
 
 // Img stores all the information of an image
 type Img struct {
-	// uri is a local file URI
-	uri string
-
-	// basename is the base name of the image file
-	basename string
+	// filename is the base name of the image file
+	filename string
 
 	// img is the image.Image object of the image
 	img image.Image
@@ -32,24 +31,35 @@ type Img struct {
 	imgType string
 }
 
-func newImg(uri string) (*Img, error) {
-	f, err := os.Open(uri)
+func newImgByFilepath(filepath string) (*Img, error) {
+	f, err := os.Open(filepath)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 	defer f.Close()
 
-	img, imgType, err := image.Decode(f)
+	return newImg(f, path.Base(filepath))
+}
+
+func newImg(r io.Reader, filename string) (*Img, error) {
+	img, imgType, err := image.Decode(r)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 
 	return &Img{
-		uri:      uri,
-		basename: filepath.Base(uri),
+		filename: filename,
 		img:      img,
 		imgType:  imgType,
 	}, nil
+}
+
+func (img *Img) Clone() *Img {
+	return &Img{
+		filename: img.filename,
+		img:      util.CloneImage(img.img),
+		imgType:  img.imgType,
+	}
 }
 
 func readImgs(filename string) ([]*Img, error) {
@@ -62,7 +72,7 @@ func readImgs(filename string) ([]*Img, error) {
 		return imgs, nil
 	}
 
-	img, err := newImg(filename)
+	img, err := newImgByFilepath(filename)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
@@ -101,8 +111,7 @@ func readImgsInZip(filename string) ([]*Img, error) {
 		}
 
 		imgs = append(imgs, &Img{
-			uri:      f.Name,
-			basename: filepath.Base(f.Name),
+			filename: filepath.Base(f.Name),
 			img:      img,
 			imgType:  imgType,
 		})
@@ -111,8 +120,8 @@ func readImgsInZip(filename string) ([]*Img, error) {
 	return imgs, nil
 }
 
-func saveImgsAsZip(imgs []*Img, uri string) error {
-	zipFile, err := os.Create(uri)
+func saveImgsAsZip(imgs []*Img, filepath string) error {
+	zipFile, err := os.Create(filepath)
 	if err != nil {
 		return util.Errorf("%w", err)
 	}
@@ -121,21 +130,15 @@ func saveImgsAsZip(imgs []*Img, uri string) error {
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 
-	imgCnt := len(imgs)
+	imgLenDigits := util.CountDigits(len(imgs))
 	for i, img := range imgs {
-		prefix := util.PaddingZero(i, imgCnt) + "_"
-		imgFile, err := zipWriter.Create(prefix + img.basename)
+		prefix := util.PaddingZero(i, imgLenDigits) + "_"
+		imgFile, err := zipWriter.Create(prefix + img.filename)
 		if err != nil {
 			return util.Errorf("%w", err)
 		}
 
-		f, err := os.Open(img.uri)
-		if err != nil {
-			return util.Errorf("%w", err)
-		}
-		defer f.Close()
-
-		_, err = io.Copy(imgFile, f)
+		err = jpeg.Encode(imgFile, img.img, &jpeg.Options{Quality: 90})
 		if err != nil {
 			return util.Errorf("%w", err)
 		}
