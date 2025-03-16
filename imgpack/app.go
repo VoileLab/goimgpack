@@ -157,6 +157,8 @@ func (app *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 			idx := *app.selectedImgIdx
 			if idx > 0 {
 				app.imgListWidget.Select(idx - 1)
+			} else {
+				app.imgListWidget.Select(len(app.imgs) - 1)
 			}
 		}
 	case fyne.KeyDown:
@@ -164,6 +166,8 @@ func (app *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 			idx := *app.selectedImgIdx
 			if idx < len(app.imgs)-1 {
 				app.imgListWidget.Select(idx + 1)
+			} else {
+				app.imgListWidget.Select(0)
 			}
 		}
 	}
@@ -259,12 +263,13 @@ func (app *ImgpackApp) toolbarMoveUpAction() {
 
 	idx := *app.selectedImgIdx
 	if idx == 0 {
+		app.imgs = append(app.imgs[1:], app.imgs[0])
+		app.imgListWidget.Select(len(app.imgs) - 1)
 		return
 	}
 
 	app.imgs[idx], app.imgs[idx-1] = app.imgs[idx-1], app.imgs[idx]
-	app.onSelectImageURI(idx)
-	app.imgListWidget.Refresh()
+	app.imgListWidget.Select(idx - 1)
 }
 
 func (app *ImgpackApp) toolbarMoveDownAction() {
@@ -274,12 +279,13 @@ func (app *ImgpackApp) toolbarMoveDownAction() {
 
 	idx := *app.selectedImgIdx
 	if idx == len(app.imgs)-1 {
+		app.imgs = append([]*Img{app.imgs[len(app.imgs)-1]}, app.imgs[:len(app.imgs)-1]...)
+		app.imgListWidget.Select(0)
 		return
 	}
 
 	app.imgs[idx], app.imgs[idx+1] = app.imgs[idx+1], app.imgs[idx]
-	app.onSelectImageURI(idx)
-	app.imgListWidget.Refresh()
+	app.imgListWidget.Select(idx + 1)
 }
 
 func (app *ImgpackApp) toolbarSaveAction() {
