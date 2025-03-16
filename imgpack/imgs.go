@@ -1,24 +1,22 @@
 package imgpack
 
 import (
-	"fmt"
-	"image/jpeg"
-	_ "image/jpeg"
 	_ "image/png"
-	"maps"
-	"strings"
 
 	_ "golang.org/x/image/webp"
 
 	"archive/zip"
+	"bytes"
+	"fmt"
 	"image"
+	"image/jpeg"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
 	"slices"
-
-	"bytes"
+	"strings"
 
 	"github.com/VoileLab/goimgpack/internal/util"
 	"github.com/pdfcpu/pdfcpu/pkg/api"

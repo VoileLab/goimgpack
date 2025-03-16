@@ -1,8 +1,9 @@
 package imgpack
 
 import (
-	"bytes"
 	_ "embed"
+
+	"bytes"
 	"image"
 )
 
