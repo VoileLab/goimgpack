@@ -1,0 +1,6 @@
+Website = "https://github.com/VoileLab/goimgpack"
+
+[Details]
+  Icon = "imgpack.png"
+  Name = "Image Packer"
+  ID = "com.github.voile.goimgpack"

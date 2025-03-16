@@ -17,7 +17,7 @@ import (
 
 const appID = "com.mukyu.voile.imgpack"
 const appTitle = "Image Packer"
-const appVersion = "v0.1"
+const appDescription = "A tool to pack images into an archive file"
 
 var appSize = fyne.NewSize(1000, 800)
 
@@ -82,8 +82,7 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.preferenceWindow.Show()
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			infoStr := fmt.Sprintf("%s %s", appTitle, appVersion)
-			dialog := dialog.NewInformation("About", infoStr, mainWindow)
+			dialog := dialog.NewInformation("About "+appTitle, appDescription, mainWindow)
 			dialog.Show()
 		}),
 	)
