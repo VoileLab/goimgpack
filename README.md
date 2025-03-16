@@ -14,6 +14,12 @@ A simple image packer for packing multiple images into a single archive file.
 - Reorder images.
 - Save single image.
 
+## Packaging App for Desktop
+
+```bash
+fyne package -os darwin
+```
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
