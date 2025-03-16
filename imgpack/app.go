@@ -1,4 +1,4 @@
-package imgpackgui
+package imgpack
 
 import (
 	"fmt"
