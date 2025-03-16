@@ -68,6 +68,7 @@ func NewImgpackApp() *ImgpackApp {
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
 
 	toolbar := widget.NewToolbar(
+		widget.NewToolbarAction(theme.DocumentCreateIcon(), retApp.toolbarClearAction),
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
 		widget.NewToolbarSeparator(),
 		widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction),
@@ -171,6 +172,20 @@ func (app *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 			}
 		}
 	}
+}
+
+func (app *ImgpackApp) toolbarClearAction() {
+	if len(app.imgs) == 0 {
+		return
+	}
+
+	dialog.ShowConfirm("Clear all images", "Are you sure to clear all images?",
+		func(b bool) {
+			if b {
+				app.imgs = []*Img{}
+			}
+		},
+		app.mainWindow)
 }
 
 func (app *ImgpackApp) toolbarAddAction() {
