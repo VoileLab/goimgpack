@@ -3,6 +3,7 @@ package imgpack
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"slices"
 
 	"fyne.io/fyne/v2"
@@ -13,11 +14,11 @@ import (
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	dialogx "fyne.io/x/fyne/dialog"
 )
 
-const appID = "com.github.voile.goimgpack"
-const appTitle = "Image Packer"
-const appDescription = "A tool to pack images into an archive file"
+const appDescription = "A tool to pack images into an archive file."
 
 var appSize = fyne.NewSize(1000, 800)
 
@@ -41,9 +42,10 @@ type ImgpackApp struct {
 }
 
 func NewImgpackApp() *ImgpackApp {
-	fApp := app.NewWithID(appID)
+	fApp := app.New()
+	meta := fApp.Metadata()
 
-	mainWindow := fApp.NewWindow(appTitle)
+	mainWindow := fApp.NewWindow(meta.Name)
 	mainWindow.Resize(appSize)
 	mainWindow.CenterOnScreen()
 
@@ -82,8 +84,12 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.preferenceWindow.Show()
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			dialog := dialog.NewInformation("About "+appTitle, appDescription, mainWindow)
-			dialog.Show()
+			docURL, _ := url.Parse("https://github.com/VoileLab/goimgpack")
+			links := []*widget.Hyperlink{
+				widget.NewHyperlink("Github", docURL),
+			}
+
+			dialogx.ShowAboutWindow(appDescription, links, fApp)
 		}),
 	)
 

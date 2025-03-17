@@ -1,6 +1,7 @@
 Website = "https://github.com/VoileLab/goimgpack"
 
 [Details]
-  Icon = "imgpack.png"
-  Name = "Image Packer"
   ID = "com.github.voile.goimgpack"
+  Name = "Image Packer"
+  Icon = "imgpack.png"
+  Version = "0.1.0"
