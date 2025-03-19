@@ -146,71 +146,71 @@ func NewImgpackApp() *ImgpackApp {
 	return retApp
 }
 
-func (app *ImgpackApp) Run() {
-	app.mainWindow.ShowAndRun()
+func (iApp *ImgpackApp) Run() {
+	iApp.mainWindow.ShowAndRun()
 }
 
-func (app *ImgpackApp) dropFiles(files []fyne.URI) {
+func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 	for _, file := range files {
 		imgs, err := readImgs(file.Path())
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			continue
 		}
 
-		if app.selectedImgIdx == nil {
-			app.imgs = append(app.imgs, imgs...)
+		if iApp.selectedImgIdx == nil {
+			iApp.imgs = append(iApp.imgs, imgs...)
 		} else {
-			idx := *app.selectedImgIdx
-			app.imgs = slices.Insert(app.imgs, idx+1, imgs...)
+			idx := *iApp.selectedImgIdx
+			iApp.imgs = slices.Insert(iApp.imgs, idx+1, imgs...)
 		}
 	}
 
-	app.imgListWidget.Refresh()
+	iApp.imgListWidget.Refresh()
 }
 
-func (app *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
+func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 	switch e.Name {
 	case fyne.KeyUp:
-		if app.selectedImgIdx != nil {
-			idx := *app.selectedImgIdx
+		if iApp.selectedImgIdx != nil {
+			idx := *iApp.selectedImgIdx
 			if idx > 0 {
-				app.imgListWidget.Select(idx - 1)
+				iApp.imgListWidget.Select(idx - 1)
 			} else {
-				app.imgListWidget.Select(len(app.imgs) - 1)
+				iApp.imgListWidget.Select(len(iApp.imgs) - 1)
 			}
 		}
 	case fyne.KeyDown:
-		if app.selectedImgIdx != nil {
-			idx := *app.selectedImgIdx
-			if idx < len(app.imgs)-1 {
-				app.imgListWidget.Select(idx + 1)
+		if iApp.selectedImgIdx != nil {
+			idx := *iApp.selectedImgIdx
+			if idx < len(iApp.imgs)-1 {
+				iApp.imgListWidget.Select(idx + 1)
 			} else {
-				app.imgListWidget.Select(0)
+				iApp.imgListWidget.Select(0)
 			}
 		}
 	}
 }
 
-func (app *ImgpackApp) toolbarClearAction() {
-	if len(app.imgs) == 0 {
+func (iApp *ImgpackApp) toolbarClearAction() {
+	if len(iApp.imgs) == 0 {
 		return
 	}
 
 	dialog.ShowConfirm("Clear all images", "Are you sure to clear all images?",
 		func(b bool) {
 			if b {
-				app.imgs = []*Img{}
-				app.selectedImgIdx = nil
+				iApp.imgs = []*Img{}
+				iApp.selectedImgIdx = nil
 			}
 		},
-		app.mainWindow)
+		iApp.mainWindow)
 }
 
-func (app *ImgpackApp) toolbarAddAction() {
+func (iApp *ImgpackApp) toolbarAddAction() {
 	dlg := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 
@@ -227,33 +227,33 @@ func (app *ImgpackApp) toolbarAddAction() {
 		filepath := f.URI().Path()
 		imgs, err := readImgs(filepath)
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 
-		if app.selectedImgIdx == nil {
-			app.imgs = append(app.imgs, imgs...)
+		if iApp.selectedImgIdx == nil {
+			iApp.imgs = append(iApp.imgs, imgs...)
 		} else {
-			idx := *app.selectedImgIdx
-			app.imgs = slices.Insert(app.imgs, idx+1, imgs...)
+			idx := *iApp.selectedImgIdx
+			iApp.imgs = slices.Insert(iApp.imgs, idx+1, imgs...)
 		}
 
-		app.imgListWidget.Refresh()
-	}, app.mainWindow)
+		iApp.imgListWidget.Refresh()
+	}, iApp.mainWindow)
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedAddExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
 
-func (app *ImgpackApp) toolbarDownloadAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarDownloadAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	img := app.imgs[*app.selectedImgIdx]
+	img := iApp.imgs[*iApp.selectedImgIdx]
 	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 
@@ -264,13 +264,13 @@ func (app *ImgpackApp) toolbarDownloadAction() {
 
 		err = saveImg(img, f)
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 		f.Close()
 
-		app.stateBar.SetText("Saved successfully")
-	}, app.mainWindow)
+		iApp.stateBar.SetText("Saved successfully")
+	}, iApp.mainWindow)
 
 	dlg.SetFileName(img.filename + ".jpg")
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
@@ -278,92 +278,92 @@ func (app *ImgpackApp) toolbarDownloadAction() {
 	dlg.Show()
 }
 
-func (app *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
-	app.selectedImgIdx = &id
-	img := app.imgs[id]
+func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
+	iApp.selectedImgIdx = &id
+	img := iApp.imgs[id]
 
 	stateText := fmt.Sprintf("Selected: %s - type: %s", img.filename, img.imgType)
-	app.stateBar.SetText(stateText)
+	iApp.stateBar.SetText(stateText)
 
-	app.imgShow.Resource = nil
-	app.imgShow.Image = img.img
-	app.imgShow.Refresh()
+	iApp.imgShow.Resource = nil
+	iApp.imgShow.Image = img.img
+	iApp.imgShow.Refresh()
 }
 
-func (app *ImgpackApp) toolbarDeleteAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarDeleteAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	idx := *app.selectedImgIdx
-	app.imgs = slices.Delete(app.imgs, idx, idx+1)
-	app.imgListWidget.Refresh()
+	idx := *iApp.selectedImgIdx
+	iApp.imgs = slices.Delete(iApp.imgs, idx, idx+1)
+	iApp.imgListWidget.Refresh()
 
-	if idx >= len(app.imgs) {
-		app.selectedImgIdx = nil
-		app.imgShow.Resource = nil
-		app.imgShow.Image = assets.ImgPlaceholder
-		app.imgShow.Refresh()
+	if idx >= len(iApp.imgs) {
+		iApp.selectedImgIdx = nil
+		iApp.imgShow.Resource = nil
+		iApp.imgShow.Image = assets.ImgPlaceholder
+		iApp.imgShow.Refresh()
 	} else {
-		app.onSelectImageURI(idx)
+		iApp.onSelectImageURI(idx)
 	}
 }
 
-func (app *ImgpackApp) toolbarDupAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarDupAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	idx := *app.selectedImgIdx
-	img := app.imgs[idx]
+	idx := *iApp.selectedImgIdx
+	img := iApp.imgs[idx]
 
 	newImg := img.Clone()
 
-	app.imgs = slices.Insert(app.imgs, idx+1, newImg)
-	app.imgListWidget.Refresh()
+	iApp.imgs = slices.Insert(iApp.imgs, idx+1, newImg)
+	iApp.imgListWidget.Refresh()
 }
 
-func (app *ImgpackApp) toolbarMoveUpAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarMoveUpAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	idx := *app.selectedImgIdx
+	idx := *iApp.selectedImgIdx
 	if idx == 0 {
-		app.imgs = append(app.imgs[1:], app.imgs[0])
-		app.imgListWidget.Select(len(app.imgs) - 1)
+		iApp.imgs = append(iApp.imgs[1:], iApp.imgs[0])
+		iApp.imgListWidget.Select(len(iApp.imgs) - 1)
 		return
 	}
 
-	app.imgs[idx], app.imgs[idx-1] = app.imgs[idx-1], app.imgs[idx]
-	app.imgListWidget.Select(idx - 1)
+	iApp.imgs[idx], iApp.imgs[idx-1] = iApp.imgs[idx-1], iApp.imgs[idx]
+	iApp.imgListWidget.Select(idx - 1)
 }
 
-func (app *ImgpackApp) toolbarMoveDownAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarMoveDownAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	idx := *app.selectedImgIdx
-	if idx == len(app.imgs)-1 {
-		app.imgs = append([]*Img{app.imgs[len(app.imgs)-1]}, app.imgs[:len(app.imgs)-1]...)
-		app.imgListWidget.Select(0)
+	idx := *iApp.selectedImgIdx
+	if idx == len(iApp.imgs)-1 {
+		iApp.imgs = append([]*Img{iApp.imgs[len(iApp.imgs)-1]}, iApp.imgs[:len(iApp.imgs)-1]...)
+		iApp.imgListWidget.Select(0)
 		return
 	}
 
-	app.imgs[idx], app.imgs[idx+1] = app.imgs[idx+1], app.imgs[idx]
-	app.imgListWidget.Select(idx + 1)
+	iApp.imgs[idx], iApp.imgs[idx+1] = iApp.imgs[idx+1], iApp.imgs[idx]
+	iApp.imgListWidget.Select(idx + 1)
 }
 
-func (app *ImgpackApp) toolbarSaveAction() {
-	if len(app.imgs) == 0 {
-		app.stateBar.SetText("No image to save")
+func (iApp *ImgpackApp) toolbarSaveAction() {
+	if len(iApp.imgs) == 0 {
+		iApp.stateBar.SetText("No image to save")
 		return
 	}
 
 	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 
@@ -372,16 +372,16 @@ func (app *ImgpackApp) toolbarSaveAction() {
 			return
 		}
 
-		err = saveImgsAsZip(app.imgs, f,
-			app.fApp.Preferences().BoolWithFallback("add_digit", true))
+		err = saveImgsAsZip(iApp.imgs, f,
+			iApp.fApp.Preferences().BoolWithFallback("add_digit", true))
 		if err != nil {
-			dialog.ShowError(err, app.mainWindow)
+			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
 		f.Close()
 
-		app.stateBar.SetText("Saved successfully")
-	}, app.mainWindow)
+		iApp.stateBar.SetText("Saved successfully")
+	}, iApp.mainWindow)
 
 	dlg.SetFileName("output.cbz")
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedArchiveExts))
@@ -389,13 +389,13 @@ func (app *ImgpackApp) toolbarSaveAction() {
 	dlg.Show()
 }
 
-func (app *ImgpackApp) toolbarRotateAction() {
-	if app.selectedImgIdx == nil {
+func (iApp *ImgpackApp) toolbarRotateAction() {
+	if iApp.selectedImgIdx == nil {
 		return
 	}
 
-	img := app.imgs[*app.selectedImgIdx]
+	img := iApp.imgs[*iApp.selectedImgIdx]
 	img.img = imaging.Rotate90(img.img)
-	app.imgShow.Image = img.img
-	app.imgShow.Refresh()
+	iApp.imgShow.Image = img.img
+	iApp.imgShow.Refresh()
 }
