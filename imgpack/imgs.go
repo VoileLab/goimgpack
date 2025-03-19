@@ -150,7 +150,7 @@ func saveImg(img *Img, f io.Writer) error {
 	return nil
 }
 
-func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool) error {
+func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool, quality int) error {
 	zipWriter := zip.NewWriter(f)
 	defer zipWriter.Close()
 
@@ -165,7 +165,7 @@ func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool) error {
 			return util.Errorf("%w", err)
 		}
 
-		err = jpeg.Encode(imgFile, img.img, &jpeg.Options{Quality: 90})
+		err = jpeg.Encode(imgFile, img.img, &jpeg.Options{Quality: quality})
 		if err != nil {
 			return util.Errorf("%w", err)
 		}

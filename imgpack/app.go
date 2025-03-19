@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -129,14 +130,25 @@ func NewImgpackApp() *ImgpackApp {
 
 	mainWindow.SetContent(content)
 
-	addDigitCheck := widget.NewCheck("Add digit to filename", func(b bool) {
-		fApp.Preferences().SetBool("add_digit", b)
-	})
-	addDigitCheck.SetChecked(
-		fApp.Preferences().BoolWithFallback("add_digit", true))
+	addDigitCheck := widget.NewCheck("", setPreferencePrependDigit)
+	addDigitCheck.SetChecked(getPreferencePrependDigit())
 
-	prefBody := container.NewVBox(
+	jpgQualitySliderLabel := widget.NewLabel(
+		fmt.Sprintf("JPG Quality: %d", getPreferenceJPGQuality()))
+
+	jpgQualitySlider := widget.NewSlider(0, 100)
+	jpgQualitySlider.Step = 1
+	jpgQualitySlider.Value = float64(getPreferenceJPGQuality())
+	jpgQualitySlider.OnChanged = func(v float64) {
+		setPreferenceJPGQuality(int(v))
+		jpgQualitySliderLabel.SetText(fmt.Sprintf("JPG Quality: %d", int(v)))
+	}
+
+	prefBody := container.New(layout.NewFormLayout(),
+		widget.NewLabel("Add digit to filename"),
 		addDigitCheck,
+		jpgQualitySliderLabel,
+		jpgQualitySlider,
 	)
 
 	preferenceWindow.SetContent(container.NewBorder(nil,
@@ -374,7 +386,8 @@ func (iApp *ImgpackApp) toolbarSaveAction() {
 		}
 
 		err = saveImgsAsZip(iApp.imgs, f,
-			iApp.fApp.Preferences().BoolWithFallback("add_digit", true))
+			getPreferencePrependDigit(),
+			getPreferenceJPGQuality())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
