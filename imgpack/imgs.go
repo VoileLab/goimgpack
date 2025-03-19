@@ -141,14 +141,8 @@ func readImgsInZip(filename string) ([]*Img, error) {
 	return imgs, nil
 }
 
-func saveImg(img *Img, filepath string) error {
-	f, err := os.Create(filepath)
-	if err != nil {
-		return util.Errorf("%w", err)
-	}
-	defer f.Close()
-
-	err = jpeg.Encode(f, img.img, &jpeg.Options{Quality: 90})
+func saveImg(img *Img, f io.Writer) error {
+	err := jpeg.Encode(f, img.img, &jpeg.Options{Quality: 90})
 	if err != nil {
 		return util.Errorf("%w", err)
 	}
@@ -156,14 +150,8 @@ func saveImg(img *Img, filepath string) error {
 	return nil
 }
 
-func saveImgsAsZip(imgs []*Img, filepath string, prependDigit bool) error {
-	zipFile, err := os.Create(filepath)
-	if err != nil {
-		return util.Errorf("%w", err)
-	}
-	defer zipFile.Close()
-
-	zipWriter := zip.NewWriter(zipFile)
+func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool) error {
+	zipWriter := zip.NewWriter(f)
 	defer zipWriter.Close()
 
 	imgLenDigits := util.CountDigits(len(imgs))

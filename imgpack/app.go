@@ -260,17 +260,12 @@ func (app *ImgpackApp) toolbarDownloadAction() {
 			return
 		}
 
-		if f.URI() == nil {
-			log.Println("URI is nil")
-			return
-		}
-
-		filepath := f.URI().Path()
-		err = saveImg(img, filepath)
+		err = saveImg(img, f)
 		if err != nil {
 			dialog.ShowError(err, app.mainWindow)
 			return
 		}
+		f.Close()
 
 		app.stateBar.SetText("Saved successfully")
 	}, app.mainWindow)
@@ -375,18 +370,13 @@ func (app *ImgpackApp) toolbarSaveAction() {
 			return
 		}
 
-		if f.URI() == nil {
-			log.Println("URI is nil")
-			return
-		}
-
-		filepath := f.URI().Path()
-		err = saveImgsAsZip(app.imgs, filepath,
+		err = saveImgsAsZip(app.imgs, f,
 			app.fApp.Preferences().BoolWithFallback("add_digit", true))
 		if err != nil {
 			dialog.ShowError(err, app.mainWindow)
 			return
 		}
+		f.Close()
 
 		app.stateBar.SetText("Saved successfully")
 	}, app.mainWindow)
