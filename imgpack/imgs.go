@@ -21,6 +21,8 @@ import (
 	"github.com/VoileLab/goimgpack/internal/util"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
+
+	"github.com/disintegration/imaging"
 )
 
 // Img stores all the information of an image
@@ -46,7 +48,17 @@ func newImgByFilepath(filepath string) (*Img, error) {
 }
 
 func newImg(r io.Reader, filename string) (*Img, error) {
-	img, imgType, err := image.Decode(r)
+	bs, err := io.ReadAll(r)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	_, imgType, err := image.DecodeConfig(bytes.NewReader(bs))
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	img, err := imaging.Decode(bytes.NewReader(bs), imaging.AutoOrientation(true))
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}

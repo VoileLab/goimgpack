@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	fyne.io/fyne/v2 v2.5.5
 	fyne.io/x/fyne v0.0.0-20250106132206-3228f6c50107
+	github.com/disintegration/imaging v1.6.2
 	github.com/pdfcpu/pdfcpu v0.9.1
 	golang.org/x/image v0.23.0
 )

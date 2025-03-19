@@ -16,6 +16,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	dialogx "fyne.io/x/fyne/dialog"
+
+	"github.com/disintegration/imaging"
 )
 
 const appDescription = "A tool to pack images into an archive file."
@@ -79,6 +81,8 @@ func NewImgpackApp() *ImgpackApp {
 		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
 		widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction),
 		widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction),
+		widget.NewToolbarSeparator(),
+		widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
 			retApp.preferenceWindow.Show()
@@ -383,4 +387,15 @@ func (app *ImgpackApp) toolbarSaveAction() {
 	dlg.SetFilter(storage.NewExtensionFileFilter(supportedArchiveExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
+}
+
+func (app *ImgpackApp) toolbarRotateAction() {
+	if app.selectedImgIdx == nil {
+		return
+	}
+
+	img := app.imgs[*app.selectedImgIdx]
+	img.img = imaging.Rotate90(img.img)
+	app.imgShow.Image = img.img
+	app.imgShow.Refresh()
 }
