@@ -194,6 +194,7 @@ func (app *ImgpackApp) toolbarClearAction() {
 		func(b bool) {
 			if b {
 				app.imgs = []*Img{}
+				app.selectedImgIdx = nil
 			}
 		},
 		app.mainWindow)
