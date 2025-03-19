@@ -1,7 +1,8 @@
-package imgpack
+package assets
 
 import (
 	_ "embed"
+	_ "image/png"
 
 	"bytes"
 	"image"
@@ -10,12 +11,12 @@ import (
 //go:embed img_placeholder.png
 var imgPlaceholderBs []byte
 
-var imgPlaceholder image.Image
+var ImgPlaceholder image.Image
 
 func init() {
 	img, _, err := image.Decode(bytes.NewReader(imgPlaceholderBs))
 	if err != nil {
 		panic(err)
 	}
-	imgPlaceholder = img
+	ImgPlaceholder = img
 }

@@ -18,6 +18,8 @@ import (
 	dialogx "fyne.io/x/fyne/dialog"
 
 	"github.com/disintegration/imaging"
+
+	"github.com/VoileLab/goimgpack/imgpack/assets"
 )
 
 const appDescription = "A tool to pack images into an archive file."
@@ -111,7 +113,7 @@ func NewImgpackApp() *ImgpackApp {
 	imgListWidget.OnSelected = retApp.onSelectImageURI
 	retApp.imgListWidget = imgListWidget
 
-	imgShow := canvas.NewImageFromImage(imgPlaceholder)
+	imgShow := canvas.NewImageFromImage(assets.ImgPlaceholder)
 	imgShow.FillMode = canvas.ImageFillContain
 	retApp.imgShow = imgShow
 
@@ -300,7 +302,7 @@ func (app *ImgpackApp) toolbarDeleteAction() {
 	if idx >= len(app.imgs) {
 		app.selectedImgIdx = nil
 		app.imgShow.Resource = nil
-		app.imgShow.Image = imgPlaceholder
+		app.imgShow.Image = assets.ImgPlaceholder
 		app.imgShow.Refresh()
 	} else {
 		app.onSelectImageURI(idx)
