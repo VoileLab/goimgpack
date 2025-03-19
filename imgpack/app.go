@@ -129,7 +129,8 @@ func NewImgpackApp() *ImgpackApp {
 	addDigitCheck := widget.NewCheck("Add digit to filename", func(b bool) {
 		fApp.Preferences().SetBool("add_digit", b)
 	})
-	addDigitCheck.SetChecked(fApp.Preferences().Bool("add_digit"))
+	addDigitCheck.SetChecked(
+		fApp.Preferences().BoolWithFallback("add_digit", true))
 
 	prefBody := container.NewVBox(
 		addDigitCheck,
@@ -374,7 +375,8 @@ func (app *ImgpackApp) toolbarSaveAction() {
 		}
 
 		filepath := f.URI().Path()
-		err = saveImgsAsZip(app.imgs, filepath, app.fApp.Preferences().Bool("add_digit"))
+		err = saveImgsAsZip(app.imgs, filepath,
+			app.fApp.Preferences().BoolWithFallback("add_digit", true))
 		if err != nil {
 			dialog.ShowError(err, app.mainWindow)
 			return
