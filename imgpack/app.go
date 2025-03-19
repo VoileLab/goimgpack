@@ -20,17 +20,13 @@ import (
 	"github.com/disintegration/imaging"
 
 	"github.com/VoileLab/goimgpack/imgpack/assets"
+	"github.com/VoileLab/goimgpack/internal/imgutil"
 )
 
 const appDescription = "A tool to pack images into an archive file."
 const appURL = "https://github.com/VoileLab/goimgpack"
 
 var appSize = fyne.NewSize(1000, 800)
-
-var supportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
-var supportedArchiveExts = []string{".zip", ".cbz"}
-var supportedPDFExts = []string{".pdf"}
-var supportedAddExts = slices.Concat(supportedImageExts, supportedArchiveExts, supportedPDFExts)
 
 type ImgpackApp struct {
 	fApp       fyne.App
@@ -42,7 +38,7 @@ type ImgpackApp struct {
 
 	selectedImgIdx *int
 
-	imgs []*Img
+	imgs []*imgutil.Image
 }
 
 func NewImgpackApp() *ImgpackApp {
@@ -100,7 +96,7 @@ func NewImgpackApp() *ImgpackApp {
 			return widget.NewLabel("Item")
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(retApp.imgs[i].filename)
+			o.(*widget.Label).SetText(retApp.imgs[i].Filename)
 		},
 	)
 	imgListWidget.OnSelected = retApp.onSelectImageURI
@@ -130,7 +126,7 @@ func (iApp *ImgpackApp) Run() {
 
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 	for _, file := range files {
-		imgs, err := readImgs(file.Path())
+		imgs, err := imgutil.ReadImgs(file.Path())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			continue
@@ -178,7 +174,7 @@ func (iApp *ImgpackApp) toolbarClearAction() {
 	dialog.ShowConfirm("Clear all images", "Are you sure to clear all images?",
 		func(b bool) {
 			if b {
-				iApp.imgs = []*Img{}
+				iApp.imgs = []*imgutil.Image{}
 				iApp.selectedImgIdx = nil
 			}
 		},
@@ -203,7 +199,7 @@ func (iApp *ImgpackApp) toolbarAddAction() {
 		}
 
 		filepath := f.URI().Path()
-		imgs, err := readImgs(filepath)
+		imgs, err := imgutil.ReadImgs(filepath)
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
@@ -218,7 +214,10 @@ func (iApp *ImgpackApp) toolbarAddAction() {
 
 		iApp.imgListWidget.Refresh()
 	}, iApp.mainWindow)
-	dlg.SetFilter(storage.NewExtensionFileFilter(supportedAddExts))
+	dlg.SetFilter(storage.NewExtensionFileFilter(slices.Concat(
+		imgutil.SupportedImageExts,
+		imgutil.SupportedArchiveExts,
+		imgutil.SupportedPDFExts)))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
@@ -240,7 +239,7 @@ func (iApp *ImgpackApp) toolbarDownloadAction() {
 			return
 		}
 
-		err = saveImg(img, f)
+		err = imgutil.SaveImg(img, f)
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
@@ -250,8 +249,8 @@ func (iApp *ImgpackApp) toolbarDownloadAction() {
 		iApp.stateBar.SetText("Saved successfully")
 	}, iApp.mainWindow)
 
-	dlg.SetFileName(img.filename + ".jpg")
-	dlg.SetFilter(storage.NewExtensionFileFilter(supportedImageExts))
+	dlg.SetFileName(img.Filename + ".jpg")
+	dlg.SetFilter(storage.NewExtensionFileFilter(imgutil.SupportedImageExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
@@ -260,11 +259,11 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	iApp.selectedImgIdx = &id
 	img := iApp.imgs[id]
 
-	stateText := fmt.Sprintf("Selected: %s - type: %s", img.filename, img.imgType)
+	stateText := fmt.Sprintf("Selected: %s - type: %s", img.Filename, img.Type)
 	iApp.stateBar.SetText(stateText)
 
 	iApp.imgShow.Resource = nil
-	iApp.imgShow.Image = img.img
+	iApp.imgShow.Image = img.Img
 	iApp.imgShow.Refresh()
 }
 
@@ -324,7 +323,7 @@ func (iApp *ImgpackApp) toolbarMoveDownAction() {
 
 	idx := *iApp.selectedImgIdx
 	if idx == len(iApp.imgs)-1 {
-		iApp.imgs = append([]*Img{iApp.imgs[len(iApp.imgs)-1]}, iApp.imgs[:len(iApp.imgs)-1]...)
+		iApp.imgs = append([]*imgutil.Image{iApp.imgs[len(iApp.imgs)-1]}, iApp.imgs[:len(iApp.imgs)-1]...)
 		iApp.imgListWidget.Select(0)
 		return
 	}
@@ -350,7 +349,7 @@ func (iApp *ImgpackApp) toolbarSaveAction() {
 			return
 		}
 
-		err = saveImgsAsZip(iApp.imgs, f,
+		err = imgutil.SaveImgsAsZip(iApp.imgs, f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
 		if err != nil {
@@ -363,7 +362,7 @@ func (iApp *ImgpackApp) toolbarSaveAction() {
 	}, iApp.mainWindow)
 
 	dlg.SetFileName("output.cbz")
-	dlg.SetFilter(storage.NewExtensionFileFilter(supportedArchiveExts))
+	dlg.SetFilter(storage.NewExtensionFileFilter(imgutil.SupportedArchiveExts))
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
@@ -374,7 +373,7 @@ func (iApp *ImgpackApp) toolbarRotateAction() {
 	}
 
 	img := iApp.imgs[*iApp.selectedImgIdx]
-	img.img = imaging.Rotate90(img.img)
-	iApp.imgShow.Image = img.img
+	img.Img = imaging.Rotate90(img.Img)
+	iApp.imgShow.Image = img.Img
 	iApp.imgShow.Refresh()
 }

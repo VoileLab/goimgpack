@@ -1,4 +1,4 @@
-package imgpack
+package imgutil
 
 import (
 	_ "image/png"
@@ -25,29 +25,33 @@ import (
 	"github.com/disintegration/imaging"
 )
 
-// Img stores all the information of an image
-type Img struct {
-	// filename is the base name of the image file without the extension
-	filename string
+var SupportedArchiveExts = []string{".zip", ".cbz"}
+var SupportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
+var SupportedPDFExts = []string{".pdf"}
 
-	// img is the image.Image object of the image
-	img image.Image
+// Image stores all the information of an image
+type Image struct {
+	// Filename is the base name of the image file without the extension
+	Filename string
 
-	// imgType is the type of the image
-	imgType string
+	// Img is the image.Image object of the image
+	Img image.Image
+
+	// Type is the type of the image
+	Type string
 }
 
-func newImgByFilepath(filepath string) (*Img, error) {
+func NewImgByFilepath(filepath string) (*Image, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 	defer f.Close()
 
-	return newImg(f, path.Base(filepath))
+	return NewImg(f, path.Base(filepath))
 }
 
-func newImg(r io.Reader, filename string) (*Img, error) {
+func NewImg(r io.Reader, filename string) (*Image, error) {
 	bs, err := io.ReadAll(r)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
@@ -66,25 +70,25 @@ func newImg(r io.Reader, filename string) (*Img, error) {
 	// remove ext of filename
 	filename = strings.TrimSuffix(filename, filepath.Ext(filename))
 
-	return &Img{
-		filename: filename,
-		img:      img,
-		imgType:  imgType,
+	return &Image{
+		Filename: filename,
+		Img:      img,
+		Type:     imgType,
 	}, nil
 }
 
-func (img *Img) Clone() *Img {
-	return &Img{
-		filename: img.filename,
-		img:      util.CloneImage(img.img),
-		imgType:  img.imgType,
+func (img *Image) Clone() *Image {
+	return &Image{
+		Filename: img.Filename,
+		Img:      util.CloneImage(img.Img),
+		Type:     img.Type,
 	}
 }
 
-func readImgs(filename string) ([]*Img, error) {
+func ReadImgs(filename string) ([]*Image, error) {
 	fileExt := filepath.Ext(filename)
-	if slices.Contains(supportedArchiveExts, fileExt) {
-		imgs, err := readImgsInZip(filename)
+	if slices.Contains(SupportedArchiveExts, fileExt) {
+		imgs, err := ReadImgsInZip(filename)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
@@ -92,35 +96,35 @@ func readImgs(filename string) ([]*Img, error) {
 	}
 
 	if fileExt == ".pdf" {
-		imgs, err := readImgsInPDF(filename)
+		imgs, err := ReadImgsInPDF(filename)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
 		return imgs, nil
 	}
 
-	img, err := newImgByFilepath(filename)
+	img, err := NewImgByFilepath(filename)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 
-	return []*Img{img}, nil
+	return []*Image{img}, nil
 }
 
-func readImgsInZip(filename string) ([]*Img, error) {
+func ReadImgsInZip(filename string) ([]*Image, error) {
 	r, err := zip.OpenReader(filename)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 	defer r.Close()
 
-	imgs := make([]*Img, 0, len(r.File))
+	imgs := make([]*Image, 0, len(r.File))
 	for _, f := range r.File {
 		if f.FileInfo().IsDir() {
 			continue
 		}
 
-		if !slices.Contains(supportedImageExts, filepath.Ext(f.Name)) {
+		if !slices.Contains(SupportedImageExts, filepath.Ext(f.Name)) {
 			continue
 		}
 
@@ -130,7 +134,7 @@ func readImgsInZip(filename string) ([]*Img, error) {
 		}
 		defer rc.Close()
 
-		img, err := newImg(rc, f.Name)
+		img, err := NewImg(rc, f.Name)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
@@ -141,8 +145,8 @@ func readImgsInZip(filename string) ([]*Img, error) {
 	return imgs, nil
 }
 
-func saveImg(img *Img, f io.Writer) error {
-	err := jpeg.Encode(f, img.img, &jpeg.Options{Quality: 90})
+func SaveImg(img *Image, f io.Writer) error {
+	err := jpeg.Encode(f, img.Img, &jpeg.Options{Quality: 90})
 	if err != nil {
 		return util.Errorf("%w", err)
 	}
@@ -150,13 +154,13 @@ func saveImg(img *Img, f io.Writer) error {
 	return nil
 }
 
-func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool, quality int) error {
+func SaveImgsAsZip(imgs []*Image, f io.Writer, prependDigit bool, quality int) error {
 	zipWriter := zip.NewWriter(f)
 	defer zipWriter.Close()
 
 	imgLenDigits := util.CountDigits(len(imgs))
 	for i, img := range imgs {
-		filename := img.filename + ".jpg"
+		filename := img.Filename + ".jpg"
 		if prependDigit {
 			filename = util.PaddingZero(i, imgLenDigits) + "_" + filename
 		}
@@ -165,7 +169,7 @@ func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool, quality int) err
 			return util.Errorf("%w", err)
 		}
 
-		err = jpeg.Encode(imgFile, img.img, &jpeg.Options{Quality: quality})
+		err = jpeg.Encode(imgFile, img.Img, &jpeg.Options{Quality: quality})
 		if err != nil {
 			return util.Errorf("%w", err)
 		}
@@ -174,7 +178,7 @@ func saveImgsAsZip(imgs []*Img, f io.Writer, prependDigit bool, quality int) err
 	return nil
 }
 
-func readImgsInPDF(filename string) ([]*Img, error) {
+func ReadImgsInPDF(filename string) ([]*Image, error) {
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
 
@@ -215,12 +219,12 @@ func readImgsInPDF(filename string) ([]*Img, error) {
 	}
 	jdxMaxDigits := util.CountDigits(jdxMax)
 
-	imgsMap := make(map[string]*Img)
+	imgsMap := make(map[string]*Image)
 	for idx, imgMap := range imgsInPDF {
 		for jdx, imgReader := range imgMap {
 			filename := fmt.Sprintf("%s_%d", util.PaddingZero(jdx, jdxMaxDigits), idx)
 
-			img, err := newImg(imgReader, filename)
+			img, err := NewImg(imgReader, filename)
 			if err != nil {
 				return nil, util.Errorf("%w", err)
 			}
@@ -232,7 +236,7 @@ func readImgsInPDF(filename string) ([]*Img, error) {
 	imgsKeys := slices.Collect(maps.Keys(imgsMap))
 	slices.Sort(imgsKeys)
 
-	imgs := make([]*Img, len(imgsKeys))
+	imgs := make([]*Image, len(imgsKeys))
 	for i, key := range imgsKeys {
 		imgs[i] = imgsMap[key]
 	}
