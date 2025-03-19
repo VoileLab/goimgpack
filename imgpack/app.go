@@ -23,6 +23,7 @@ import (
 )
 
 const appDescription = "A tool to pack images into an archive file."
+const appURL = "https://github.com/VoileLab/goimgpack"
 
 var appSize = fyne.NewSize(1000, 800)
 
@@ -90,12 +91,12 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.preferenceWindow.Show()
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			docURL, _ := url.Parse("https://github.com/VoileLab/goimgpack")
+			docURL, _ := url.Parse(appURL)
 			links := []*widget.Hyperlink{
 				widget.NewHyperlink("Github", docURL),
 			}
 
-			dialogx.ShowAboutWindow(appDescription, links, fApp)
+			dialogx.ShowAbout(appDescription, links, fApp, mainWindow)
 		}),
 	)
 
