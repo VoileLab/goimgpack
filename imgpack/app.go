@@ -150,13 +150,18 @@ func (app *ImgpackApp) Run() {
 
 func (app *ImgpackApp) dropFiles(files []fyne.URI) {
 	for _, file := range files {
-		img, err := newImgByFilepath(file.Path())
+		imgs, err := readImgs(file.Path())
 		if err != nil {
 			dialog.ShowError(err, app.mainWindow)
 			continue
 		}
 
-		app.imgs = append(app.imgs, img)
+		if app.selectedImgIdx == nil {
+			app.imgs = append(app.imgs, imgs...)
+		} else {
+			idx := *app.selectedImgIdx
+			app.imgs = slices.Insert(app.imgs, idx+1, imgs...)
+		}
 	}
 
 	app.imgListWidget.Refresh()
