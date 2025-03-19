@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -34,9 +33,8 @@ var supportedPDFExts = []string{".pdf"}
 var supportedAddExts = slices.Concat(supportedImageExts, supportedArchiveExts, supportedPDFExts)
 
 type ImgpackApp struct {
-	fApp             fyne.App
-	mainWindow       fyne.Window
-	preferenceWindow fyne.Window
+	fApp       fyne.App
+	mainWindow fyne.Window
 
 	stateBar      *widget.Label
 	imgListWidget *widget.List
@@ -55,18 +53,9 @@ func NewImgpackApp() *ImgpackApp {
 	mainWindow.Resize(appSize)
 	mainWindow.CenterOnScreen()
 
-	preferenceWindow := fApp.NewWindow("Preferences")
-	preferenceWindow.Resize(fyne.NewSize(400, 300))
-	preferenceWindow.SetFixedSize(true)
-	preferenceWindow.CenterOnScreen()
-	preferenceWindow.SetCloseIntercept(func() {
-		preferenceWindow.Hide()
-	})
-
 	retApp := &ImgpackApp{
-		fApp:             fApp,
-		mainWindow:       mainWindow,
-		preferenceWindow: preferenceWindow,
+		fApp:       fApp,
+		mainWindow: mainWindow,
 	}
 
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
@@ -89,7 +78,9 @@ func NewImgpackApp() *ImgpackApp {
 		widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction),
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
-			retApp.preferenceWindow.Show()
+			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), mainWindow)
+			dlg.Resize(fyne.NewSize(400, 300))
+			dlg.Show()
 		}),
 		widget.NewToolbarAction(theme.HelpIcon(), func() {
 			docURL, _ := url.Parse(appURL)
@@ -129,32 +120,6 @@ func NewImgpackApp() *ImgpackApp {
 		stateBar, nil, nil, hSplit)
 
 	mainWindow.SetContent(content)
-
-	addDigitCheck := widget.NewCheck("", setPreferencePrependDigit)
-	addDigitCheck.SetChecked(getPreferencePrependDigit())
-
-	jpgQualitySliderLabel := widget.NewLabel(
-		fmt.Sprintf("JPG Quality: %d", getPreferenceJPGQuality()))
-
-	jpgQualitySlider := widget.NewSlider(0, 100)
-	jpgQualitySlider.Step = 1
-	jpgQualitySlider.Value = float64(getPreferenceJPGQuality())
-	jpgQualitySlider.OnChanged = func(v float64) {
-		setPreferenceJPGQuality(int(v))
-		jpgQualitySliderLabel.SetText(fmt.Sprintf("JPG Quality: %d", int(v)))
-	}
-
-	prefBody := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Add digit to filename"),
-		addDigitCheck,
-		jpgQualitySliderLabel,
-		jpgQualitySlider,
-	)
-
-	preferenceWindow.SetContent(container.NewBorder(nil,
-		widget.NewButton("Close", func() {
-			retApp.preferenceWindow.Hide()
-		}), nil, nil, prefBody))
 
 	return retApp
 }
