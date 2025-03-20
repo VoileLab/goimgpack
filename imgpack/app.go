@@ -300,8 +300,10 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 		action.Enable()
 	}
 
-	stateText := fmt.Sprintf("Selected: %s - type: %s", img.Filename, img.Type)
-	iApp.stateBar.SetText(stateText)
+	bound := img.Img.Bounds()
+	imgDesc := fmt.Sprintf("filename: %s, format: %s, size: %dx%d",
+		img.Filename, img.Type, bound.Dx(), bound.Dy())
+	iApp.stateBar.SetText(imgDesc)
 
 	iApp.imgShow.Resource = nil
 	iApp.imgShow.Image = img.Img
