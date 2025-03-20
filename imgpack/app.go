@@ -39,6 +39,8 @@ type ImgpackApp struct {
 	selectedImgIdx *int
 
 	imgs []*imgutil.Image
+
+	enableOnSelectImageToolbarActions []*widget.ToolbarAction
 }
 
 func NewImgpackApp() *ImgpackApp {
@@ -60,18 +62,39 @@ func NewImgpackApp() *ImgpackApp {
 
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
 
+	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction)
+	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction)
+	dupImgsToolbarAction := widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction)
+	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction)
+	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction)
+	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction)
+	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction)
+
+	retApp.enableOnSelectImageToolbarActions = []*widget.ToolbarAction{
+		delImgsToolbarAction,
+		dupImgsToolbarAction,
+		moveUpImgsToolbarAction,
+		moveDownImgsToolbarAction,
+		downloadImgsToolbarAction,
+		rotateImgsToolbarAction,
+	}
+
+	for _, action := range retApp.enableOnSelectImageToolbarActions {
+		action.Disable()
+	}
+
 	toolbar := widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentCreateIcon(), retApp.toolbarClearAction),
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
 		widget.NewToolbarSeparator(),
-		widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction),
-		widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction),
-		widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction),
-		widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction),
-		widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction),
-		widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction),
+		addImgsToolbarAction,
+		delImgsToolbarAction,
+		dupImgsToolbarAction,
+		moveUpImgsToolbarAction,
+		moveDownImgsToolbarAction,
+		downloadImgsToolbarAction,
 		widget.NewToolbarSeparator(),
-		widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction),
+		rotateImgsToolbarAction,
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
 			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), mainWindow)
@@ -166,6 +189,20 @@ func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 	}
 }
 
+func (iApp *ImgpackApp) clearSelected() bool {
+	iApp.selectedImgIdx = nil
+	iApp.imgShow.Resource = nil
+	iApp.imgShow.Image = assets.ImgPlaceholder
+	iApp.imgShow.Refresh()
+	iApp.imgListWidget.UnselectAll()
+	iApp.imgListWidget.Refresh()
+
+	for _, action := range iApp.enableOnSelectImageToolbarActions {
+		action.Disable()
+	}
+	return true
+}
+
 func (iApp *ImgpackApp) toolbarClearAction() {
 	if len(iApp.imgs) == 0 {
 		return
@@ -175,7 +212,7 @@ func (iApp *ImgpackApp) toolbarClearAction() {
 		func(b bool) {
 			if b {
 				iApp.imgs = []*imgutil.Image{}
-				iApp.selectedImgIdx = nil
+				iApp.clearSelected()
 			}
 		},
 		iApp.mainWindow)
@@ -259,6 +296,10 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	iApp.selectedImgIdx = &id
 	img := iApp.imgs[id]
 
+	for _, action := range iApp.enableOnSelectImageToolbarActions {
+		action.Enable()
+	}
+
 	stateText := fmt.Sprintf("Selected: %s - type: %s", img.Filename, img.Type)
 	iApp.stateBar.SetText(stateText)
 
@@ -277,10 +318,7 @@ func (iApp *ImgpackApp) toolbarDeleteAction() {
 	iApp.imgListWidget.Refresh()
 
 	if idx >= len(iApp.imgs) {
-		iApp.selectedImgIdx = nil
-		iApp.imgShow.Resource = nil
-		iApp.imgShow.Image = assets.ImgPlaceholder
-		iApp.imgShow.Refresh()
+		iApp.clearSelected()
 	} else {
 		iApp.onSelectImageURI(idx)
 	}
