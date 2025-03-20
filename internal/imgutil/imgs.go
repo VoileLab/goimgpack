@@ -1,14 +1,11 @@
 package imgutil
 
 import (
-	_ "image/png"
-
-	_ "golang.org/x/image/webp"
-
 	"archive/zip"
 	"bytes"
 	"fmt"
 	"image"
+	"image/draw"
 	"image/jpeg"
 	"io"
 	"maps"
@@ -21,12 +18,9 @@ import (
 	"github.com/VoileLab/goimgpack/internal/util"
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
-
-	"github.com/disintegration/imaging"
 )
 
 var SupportedArchiveExts = []string{".zip", ".cbz"}
-var SupportedImageExts = []string{".png", ".jpg", ".jpeg", ".webp"}
 var SupportedPDFExts = []string{".pdf"}
 
 // Image stores all the information of an image
@@ -52,17 +46,7 @@ func NewImgByFilepath(filepath string) (*Image, error) {
 }
 
 func NewImg(r io.Reader, filename string) (*Image, error) {
-	bs, err := io.ReadAll(r)
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-
-	_, imgType, err := image.DecodeConfig(bytes.NewReader(bs))
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-
-	img, err := imaging.Decode(bytes.NewReader(bs), imaging.AutoOrientation(true))
+	img, imgType, err := decodeImage(r)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
@@ -78,9 +62,13 @@ func NewImg(r io.Reader, filename string) (*Image, error) {
 }
 
 func (img *Image) Clone() *Image {
+	bounds := img.Img.Bounds()
+	clone := image.NewRGBA(bounds)
+	draw.Draw(clone, bounds, img.Img, bounds.Min, draw.Src)
+
 	return &Image{
 		Filename: img.Filename,
-		Img:      util.CloneImage(img.Img),
+		Img:      clone,
 		Type:     img.Type,
 	}
 }
@@ -145,8 +133,8 @@ func ReadImgsInZip(filename string) ([]*Image, error) {
 	return imgs, nil
 }
 
-func SaveImg(img *Image, f io.Writer) error {
-	err := jpeg.Encode(f, img.Img, &jpeg.Options{Quality: 90})
+func SaveImg(img *Image, f io.Writer, quality int) error {
+	err := jpeg.Encode(f, img.Img, &jpeg.Options{Quality: quality})
 	if err != nil {
 		return util.Errorf("%w", err)
 	}

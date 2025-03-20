@@ -239,7 +239,7 @@ func (iApp *ImgpackApp) toolbarDownloadAction() {
 			return
 		}
 
-		err = imgutil.SaveImg(img, f)
+		err = imgutil.SaveImg(img, f, getPreferenceJPGQuality())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
