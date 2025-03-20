@@ -24,10 +24,24 @@ func preferenceContent() fyne.CanvasObject {
 		jpgQualitySliderLabel.SetText(fmt.Sprintf("JPG Quality: %d", int(v)))
 	}
 
+	appScaleLabel := widget.NewLabel(
+		fmt.Sprintf("App Scale: %.2f", GetPreferenceScale()))
+
+	appScaleSlider := widget.NewSlider(0.5, 4)
+	appScaleSlider.Step = 0.1
+	appScaleSlider.Value = GetPreferenceScale()
+	appScaleSlider.OnChanged = func(v float64) {
+		setPreferenceScale(v)
+		appScaleLabel.SetText(
+			fmt.Sprintf("App Scale: %.2f\n(Take effect after restart)", v))
+	}
+
 	return container.New(layout.NewFormLayout(),
 		widget.NewLabel("Add digit to filename"),
 		addDigitCheck,
 		jpgQualitySliderLabel,
 		jpgQualitySlider,
+		appScaleLabel,
+		appScaleSlider,
 	)
 }
