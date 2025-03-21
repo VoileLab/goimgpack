@@ -2,6 +2,7 @@ package imgpack
 
 import (
 	"fmt"
+	"image"
 	"log"
 	"net/url"
 	"slices"
@@ -68,7 +69,9 @@ func NewImgpackApp() *ImgpackApp {
 	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction)
 	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction)
 	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction)
+
 	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction)
+	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), retApp.toolbarCutAction)
 
 	retApp.enableOnSelectImageToolbarActions = []*widget.ToolbarAction{
 		delImgsToolbarAction,
@@ -77,6 +80,7 @@ func NewImgpackApp() *ImgpackApp {
 		moveDownImgsToolbarAction,
 		downloadImgsToolbarAction,
 		rotateImgsToolbarAction,
+		cutImgToolbarAction,
 	}
 
 	for _, action := range retApp.enableOnSelectImageToolbarActions {
@@ -95,6 +99,7 @@ func NewImgpackApp() *ImgpackApp {
 		downloadImgsToolbarAction,
 		widget.NewToolbarSeparator(),
 		rotateImgsToolbarAction,
+		cutImgToolbarAction,
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
 			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), mainWindow)
@@ -414,6 +419,40 @@ func (iApp *ImgpackApp) toolbarRotateAction() {
 
 	img := iApp.imgs[*iApp.selectedImgIdx]
 	img.Img = imaging.Rotate90(img.Img)
+	iApp.imgShow.Image = img.Img
+	iApp.imgShow.Refresh()
+}
+
+func (iApp *ImgpackApp) toolbarCutAction() {
+	if iApp.selectedImgIdx == nil {
+		return
+	}
+
+	idx := *iApp.selectedImgIdx
+	img := iApp.imgs[idx]
+	filename := img.Filename
+	imgType := img.Type
+
+	imgWidth := img.Img.Bounds().Dx()
+	imgHeight := img.Img.Bounds().Dy()
+
+	spWidth := imgWidth / 2
+
+	img1 := imaging.Crop(img.Img, image.Rect(0, 0, spWidth, imgHeight))
+	img2 := imaging.Crop(img.Img, image.Rect(spWidth, 0, imgWidth, imgHeight))
+
+	img.Filename = filename + "_1"
+	img.Img = img1
+
+	newImg := &imgutil.Image{
+		Filename: filename + "_2",
+		Img:      img2,
+		Type:     imgType,
+	}
+
+	iApp.imgs = slices.Insert(iApp.imgs, idx+1, newImg)
+	iApp.imgListWidget.Refresh()
+
 	iApp.imgShow.Image = img.Img
 	iApp.imgShow.Refresh()
 }
