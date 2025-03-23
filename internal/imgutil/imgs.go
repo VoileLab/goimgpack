@@ -91,12 +91,48 @@ func ReadImgs(filename string) ([]*Image, error) {
 		return imgs, nil
 	}
 
+	fileStat, err := os.Stat(filename)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	if fileStat.IsDir() {
+		imgs, err := ReadImgsInDir(filename)
+		if err != nil {
+			return nil, util.Errorf("%w", err)
+		}
+		return imgs, nil
+	}
+
 	img, err := NewImgByFilepath(filename)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
 
 	return []*Image{img}, nil
+}
+
+func ReadImgsInDir(dirpath string) ([]*Image, error) {
+	dir, err := os.ReadDir(dirpath)
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
+
+	imgs := make([]*Image, 0, len(dir))
+	for _, entry := range dir {
+		if entry.IsDir() {
+			continue
+		}
+
+		img, err := NewImgByFilepath(filepath.Join(dirpath, entry.Name()))
+		if err != nil {
+			return nil, util.Errorf("%w", err)
+		}
+
+		imgs = append(imgs, img)
+	}
+
+	return imgs, nil
 }
 
 func ReadImgsInZip(filename string) ([]*Image, error) {
