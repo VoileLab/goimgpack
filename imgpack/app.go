@@ -42,6 +42,10 @@ type ImgpackApp struct {
 	imgs []*imgutil.Image
 
 	enableOnSelectImageToolbarActions []*widget.ToolbarAction
+
+	// reading progress dialog
+	readingImagesDlg dialog.Dialog
+	savingDlg        dialog.Dialog
 }
 
 func NewImgpackApp() *ImgpackApp {
@@ -62,6 +66,14 @@ func NewImgpackApp() *ImgpackApp {
 	})
 
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
+
+	readingImagesDlg := dialog.NewCustomWithoutButtons(
+		"Reading images...", widget.NewProgressBarInfinite(), mainWindow)
+	retApp.readingImagesDlg = readingImagesDlg
+
+	savingDlg := dialog.NewCustomWithoutButtons(
+		"Saving...", widget.NewProgressBarInfinite(), mainWindow)
+	retApp.savingDlg = savingDlg
 
 	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction)
 	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction)
@@ -240,6 +252,9 @@ func (iApp *ImgpackApp) toolbarAddAction() {
 			return
 		}
 
+		iApp.readingImagesDlg.Show()
+		defer iApp.readingImagesDlg.Hide()
+
 		filepath := f.URI().Path()
 		imgs, err := imgutil.ReadImgs(filepath)
 		if err != nil {
@@ -256,6 +271,7 @@ func (iApp *ImgpackApp) toolbarAddAction() {
 
 		iApp.imgListWidget.Refresh()
 	}, iApp.mainWindow)
+
 	dlg.SetFilter(storage.NewExtensionFileFilter(slices.Concat(
 		imgutil.SupportedImageExts,
 		imgutil.SupportedArchiveExts,
@@ -280,6 +296,9 @@ func (iApp *ImgpackApp) toolbarDownloadAction() {
 			log.Println("Cancelled")
 			return
 		}
+
+		iApp.savingDlg.Show()
+		defer iApp.savingDlg.Hide()
 
 		err = imgutil.SaveImg(img, f, getPreferenceJPGQuality())
 		if err != nil {
@@ -393,6 +412,9 @@ func (iApp *ImgpackApp) toolbarSaveAction() {
 			log.Println("Cancelled")
 			return
 		}
+
+		iApp.savingDlg.Show()
+		defer iApp.savingDlg.Hide()
 
 		err = imgutil.SaveImgsAsZip(iApp.imgs, f,
 			getPreferencePrependDigit(),
