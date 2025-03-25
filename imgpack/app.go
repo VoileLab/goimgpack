@@ -2,7 +2,6 @@ package imgpack
 
 import (
 	"fmt"
-	"image"
 	"log"
 	"net/url"
 	"slices"
@@ -17,8 +16,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	dialogx "fyne.io/x/fyne/dialog"
-
-	"github.com/disintegration/imaging"
 
 	"github.com/VoileLab/goimgpack/imgpack/assets"
 	"github.com/VoileLab/goimgpack/internal/imgutil"
@@ -39,9 +36,7 @@ type ImgpackApp struct {
 	imgListWidget *widget.List
 	imgShow       *canvas.Image
 
-	selectedImgIdx *int
-
-	imgs []*imgutil.Image
+	opTable *OPTable
 
 	enableOnSelectImageEnables []Enablable
 
@@ -61,6 +56,8 @@ func NewImgpackApp() *ImgpackApp {
 	retApp := &ImgpackApp{
 		fApp:       fApp,
 		mainWindow: mainWindow,
+
+		opTable: &OPTable{},
 	}
 
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
@@ -245,13 +242,13 @@ func (iApp *ImgpackApp) setupToolbar() {
 func (iApp *ImgpackApp) setupContent() {
 	imgListWidget := widget.NewList(
 		func() int {
-			return len(iApp.imgs)
+			return len(iApp.opTable.imgs)
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("Item")
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(iApp.imgs[i].Filename)
+			o.(*widget.Label).SetText(iApp.opTable.imgs[i].Filename)
 		},
 	)
 	imgListWidget.OnSelected = iApp.onSelectImageURI
@@ -300,42 +297,37 @@ func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 			continue
 		}
 
-		if iApp.selectedImgIdx == nil {
-			iApp.imgs = append(iApp.imgs, imgs...)
-		} else {
-			idx := *iApp.selectedImgIdx
-			iApp.imgs = slices.Insert(iApp.imgs, idx+1, imgs...)
-		}
+		iApp.opTable.Insert(imgs...)
 	}
 
 	iApp.imgListWidget.Refresh()
 }
 
 func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
+	if iApp.opTable.selIdx == nil {
+		return
+	}
+
+	idx := *iApp.opTable.selIdx
+
 	switch e.Name {
 	case fyne.KeyUp:
-		if iApp.selectedImgIdx != nil {
-			idx := *iApp.selectedImgIdx
-			if idx > 0 {
-				iApp.imgListWidget.Select(idx - 1)
-			} else {
-				iApp.imgListWidget.Select(len(iApp.imgs) - 1)
-			}
+		if idx > 0 {
+			iApp.imgListWidget.Select(idx - 1)
+		} else {
+			iApp.imgListWidget.Select(len(iApp.opTable.imgs) - 1)
 		}
 	case fyne.KeyDown:
-		if iApp.selectedImgIdx != nil {
-			idx := *iApp.selectedImgIdx
-			if idx < len(iApp.imgs)-1 {
-				iApp.imgListWidget.Select(idx + 1)
-			} else {
-				iApp.imgListWidget.Select(0)
-			}
+		if idx < len(iApp.opTable.imgs)-1 {
+			iApp.imgListWidget.Select(idx + 1)
+		} else {
+			iApp.imgListWidget.Select(0)
 		}
 	}
 }
 
 func (iApp *ImgpackApp) clearSelected() bool {
-	iApp.selectedImgIdx = nil
+	iApp.opTable.Unselect()
 	iApp.imgShow.Resource = nil
 	iApp.imgShow.Image = assets.ImgPlaceholder
 	iApp.imgShow.Refresh()
@@ -349,14 +341,14 @@ func (iApp *ImgpackApp) clearSelected() bool {
 }
 
 func (iApp *ImgpackApp) clearAction() {
-	if len(iApp.imgs) == 0 {
+	if len(iApp.opTable.imgs) == 0 {
 		return
 	}
 
 	dialog.ShowConfirm("Clear all images", "Are you sure to clear all images?",
 		func(b bool) {
 			if b {
-				iApp.imgs = []*imgutil.Image{}
+				iApp.opTable.Clear()
 				iApp.clearSelected()
 			}
 		},
@@ -390,13 +382,7 @@ func (iApp *ImgpackApp) addAction() {
 			return
 		}
 
-		if iApp.selectedImgIdx == nil {
-			iApp.imgs = append(iApp.imgs, imgs...)
-		} else {
-			idx := *iApp.selectedImgIdx
-			iApp.imgs = slices.Insert(iApp.imgs, idx+1, imgs...)
-		}
-
+		iApp.opTable.Insert(imgs...)
 		iApp.imgListWidget.Refresh()
 	}, iApp.mainWindow)
 
@@ -409,11 +395,11 @@ func (iApp *ImgpackApp) addAction() {
 }
 
 func (iApp *ImgpackApp) downloadAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	img := iApp.imgs[*iApp.selectedImgIdx]
+	img := iApp.opTable.GetSelected()
 	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
@@ -445,8 +431,8 @@ func (iApp *ImgpackApp) downloadAction() {
 }
 
 func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
-	iApp.selectedImgIdx = &id
-	img := iApp.imgs[id]
+	iApp.opTable.Select(int(id))
+	img := iApp.opTable.GetSelected()
 
 	for _, action := range iApp.enableOnSelectImageEnables {
 		action.Enable()
@@ -463,15 +449,15 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 }
 
 func (iApp *ImgpackApp) deleteAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	idx := *iApp.selectedImgIdx
-	iApp.imgs = slices.Delete(iApp.imgs, idx, idx+1)
+	idx := *iApp.opTable.selIdx
+	iApp.opTable.Delete()
 	iApp.imgListWidget.Refresh()
 
-	if idx >= len(iApp.imgs) {
+	if idx >= len(iApp.opTable.imgs) {
 		iApp.clearSelected()
 	} else {
 		iApp.onSelectImageURI(idx)
@@ -479,53 +465,30 @@ func (iApp *ImgpackApp) deleteAction() {
 }
 
 func (iApp *ImgpackApp) dupAction() {
-	if iApp.selectedImgIdx == nil {
-		return
-	}
-
-	idx := *iApp.selectedImgIdx
-	img := iApp.imgs[idx]
-
-	newImg := img.Clone()
-
-	iApp.imgs = slices.Insert(iApp.imgs, idx+1, newImg)
+	iApp.opTable.Duplicate()
 	iApp.imgListWidget.Refresh()
 }
 
 func (iApp *ImgpackApp) moveUpAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	idx := *iApp.selectedImgIdx
-	if idx == 0 {
-		iApp.imgs = append(iApp.imgs[1:], iApp.imgs[0])
-		iApp.imgListWidget.Select(len(iApp.imgs) - 1)
-		return
-	}
-
-	iApp.imgs[idx], iApp.imgs[idx-1] = iApp.imgs[idx-1], iApp.imgs[idx]
-	iApp.imgListWidget.Select(idx - 1)
+	iApp.opTable.MoveUp()
+	iApp.imgListWidget.Select(*iApp.opTable.selIdx)
 }
 
 func (iApp *ImgpackApp) moveDownAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	idx := *iApp.selectedImgIdx
-	if idx == len(iApp.imgs)-1 {
-		iApp.imgs = append([]*imgutil.Image{iApp.imgs[len(iApp.imgs)-1]}, iApp.imgs[:len(iApp.imgs)-1]...)
-		iApp.imgListWidget.Select(0)
-		return
-	}
-
-	iApp.imgs[idx], iApp.imgs[idx+1] = iApp.imgs[idx+1], iApp.imgs[idx]
-	iApp.imgListWidget.Select(idx + 1)
+	iApp.opTable.MoveDown()
+	iApp.imgListWidget.Select(*iApp.opTable.selIdx)
 }
 
 func (iApp *ImgpackApp) saveAction() {
-	if len(iApp.imgs) == 0 {
+	if len(iApp.opTable.imgs) == 0 {
 		iApp.stateBar.SetText("No image to save")
 		return
 	}
@@ -544,7 +507,7 @@ func (iApp *ImgpackApp) saveAction() {
 		iApp.savingDlg.Show()
 		defer iApp.savingDlg.Hide()
 
-		err = imgutil.SaveImgsAsZip(iApp.imgs, f,
+		err = imgutil.SaveImgsAsZip(iApp.opTable.imgs, f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
 		if err != nil {
@@ -563,46 +526,24 @@ func (iApp *ImgpackApp) saveAction() {
 }
 
 func (iApp *ImgpackApp) rotateAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	img := iApp.imgs[*iApp.selectedImgIdx]
-	img.Img = imaging.Rotate90(img.Img)
-	iApp.imgShow.Image = img.Img
+	iApp.opTable.Rotate()
+
+	iApp.imgShow.Image = iApp.opTable.GetSelected().Img
 	iApp.imgShow.Refresh()
 }
 
 func (iApp *ImgpackApp) cutAction() {
-	if iApp.selectedImgIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	idx := *iApp.selectedImgIdx
-	img := iApp.imgs[idx]
-	filename := img.Filename
-	imgType := img.Type
+	iApp.opTable.Cut()
 
-	imgWidth := img.Img.Bounds().Dx()
-	imgHeight := img.Img.Bounds().Dy()
-
-	spWidth := imgWidth / 2
-
-	img1 := imaging.Crop(img.Img, image.Rect(0, 0, spWidth, imgHeight))
-	img2 := imaging.Crop(img.Img, image.Rect(spWidth, 0, imgWidth, imgHeight))
-
-	img.Filename = filename + "_1"
-	img.Img = img1
-
-	newImg := &imgutil.Image{
-		Filename: filename + "_2",
-		Img:      img2,
-		Type:     imgType,
-	}
-
-	iApp.imgs = slices.Insert(iApp.imgs, idx+1, newImg)
 	iApp.imgListWidget.Refresh()
-
-	iApp.imgShow.Image = img.Img
+	iApp.imgShow.Image = iApp.opTable.GetSelected().Img
 	iApp.imgShow.Refresh()
 }
