@@ -8,20 +8,20 @@ import (
 	"github.com/disintegration/imaging"
 )
 
-type OPTable struct {
+type ImgsTable struct {
 	selIdx *int
 	imgs   []*imgutil.Image
 }
 
-func (t *OPTable) Select(idx int) {
+func (t *ImgsTable) Select(idx int) {
 	t.selIdx = &idx
 }
 
-func (t *OPTable) IsSelected() bool {
+func (t *ImgsTable) IsSelected() bool {
 	return t.selIdx != nil
 }
 
-func (t *OPTable) GetSelected() *imgutil.Image {
+func (t *ImgsTable) GetSelected() *imgutil.Image {
 	if t.selIdx == nil {
 		return nil
 	}
@@ -29,11 +29,11 @@ func (t *OPTable) GetSelected() *imgutil.Image {
 	return t.imgs[*t.selIdx]
 }
 
-func (t *OPTable) Unselect() {
+func (t *ImgsTable) Unselect() {
 	t.selIdx = nil
 }
 
-func (t *OPTable) Insert(imgs ...*imgutil.Image) {
+func (t *ImgsTable) Insert(imgs ...*imgutil.Image) {
 	if t.selIdx == nil {
 		t.imgs = append(t.imgs, imgs...)
 		return
@@ -43,14 +43,14 @@ func (t *OPTable) Insert(imgs ...*imgutil.Image) {
 	t.imgs = slices.Insert(t.imgs, idx+1, imgs...)
 }
 
-func (t *OPTable) Clear() {
+func (t *ImgsTable) Clear() {
 	t.imgs = nil
 }
 
-func (t *OPTable) Remove(idx int) {
+func (t *ImgsTable) Remove(idx int) {
 }
 
-func (t *OPTable) Delete() {
+func (t *ImgsTable) Delete() {
 	if t.selIdx == nil {
 		return
 	}
@@ -59,7 +59,7 @@ func (t *OPTable) Delete() {
 	t.imgs = slices.Delete(t.imgs, idx, idx+1)
 }
 
-func (t *OPTable) Duplicate() {
+func (t *ImgsTable) Duplicate() {
 	if t.selIdx == nil {
 		return
 	}
@@ -72,7 +72,7 @@ func (t *OPTable) Duplicate() {
 	t.imgs = slices.Insert(t.imgs, idx+1, newImg)
 }
 
-func (t *OPTable) MoveUp() {
+func (t *ImgsTable) MoveUp() {
 	if t.selIdx == nil {
 		return
 	}
@@ -90,7 +90,7 @@ func (t *OPTable) MoveUp() {
 	t.selIdx = &idx
 }
 
-func (t *OPTable) MoveDown() {
+func (t *ImgsTable) MoveDown() {
 	if t.selIdx == nil {
 		return
 	}
@@ -108,7 +108,7 @@ func (t *OPTable) MoveDown() {
 	t.selIdx = &idx
 }
 
-func (t *OPTable) Rotate() {
+func (t *ImgsTable) Rotate() {
 	if t.selIdx == nil {
 		return
 	}
@@ -117,7 +117,7 @@ func (t *OPTable) Rotate() {
 	img.Img = imaging.Rotate90(img.Img)
 }
 
-func (t *OPTable) Cut() {
+func (t *ImgsTable) Cut() {
 	if t.selIdx == nil {
 		return
 	}

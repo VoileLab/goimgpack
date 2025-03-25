@@ -36,7 +36,7 @@ type ImgpackApp struct {
 	imgListWidget *widget.List
 	imgShow       *canvas.Image
 
-	opTable *OPTable
+	opTable *ImgsTable
 
 	enableOnSelectImageEnables []Enablable
 
@@ -57,7 +57,7 @@ func NewImgpackApp() *ImgpackApp {
 		fApp:       fApp,
 		mainWindow: mainWindow,
 
-		opTable: &OPTable{},
+		opTable: &ImgsTable{},
 	}
 
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
