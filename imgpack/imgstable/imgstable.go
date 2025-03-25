@@ -156,16 +156,13 @@ func (t *ImgsTable) MoveUp() {
 	}
 
 	idx := *t.selIdx
-	if idx == 0 {
-		t.imgs = append(t.imgs[:1], t.imgs[0:]...)
-		idx = len(t.imgs) - 1
-		t.selIdx = &idx
-		return
+	bIdx := idx - 1
+	if bIdx == -1 {
+		bIdx = len(t.imgs) - 1
 	}
 
-	t.imgs[idx], t.imgs[idx-1] = t.imgs[idx-1], t.imgs[idx]
-	idx = idx - 1
-	t.selIdx = &idx
+	t.imgs[idx], t.imgs[bIdx] = t.imgs[bIdx], t.imgs[idx]
+	t.selIdx = &bIdx
 
 	t.onSelectIndexChange()
 	t.onListChange()
@@ -178,16 +175,13 @@ func (t *ImgsTable) MoveDown() {
 	}
 
 	idx := *t.selIdx
-	if idx == len(t.imgs)-1 {
-		t.imgs = append([]*imgutil.Image{t.imgs[len(t.imgs)-1]}, t.imgs[:len(t.imgs)-1]...)
-		idx = 0
-		t.selIdx = &idx
-		return
+	bIdx := idx + 1
+	if bIdx == len(t.imgs) {
+		bIdx = 0
 	}
 
-	t.imgs[idx], t.imgs[idx+1] = t.imgs[idx+1], t.imgs[idx]
-	idx = idx + 1
-	t.selIdx = &idx
+	t.imgs[idx], t.imgs[bIdx] = t.imgs[bIdx], t.imgs[idx]
+	t.selIdx = &bIdx
 
 	t.onSelectIndexChange()
 	t.onListChange()
