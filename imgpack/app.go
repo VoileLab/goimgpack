@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"slices"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -387,24 +385,14 @@ func (iApp *ImgpackApp) clearAction() {
 }
 
 func (iApp *ImgpackApp) addAction() {
-	dlg := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
-		if err != nil {
-			dialog.ShowError(err, iApp.mainWindow)
-			return
-		}
-
-		if f == nil {
-			log.Println("Cancelled")
-			return
-		}
+	openImgsFile(func(f fyne.URIReadCloser) {
+		iApp.readingImagesDlg.Show()
+		defer iApp.readingImagesDlg.Hide()
 
 		if f.URI() == nil {
 			log.Println("URI is nil")
 			return
 		}
-
-		iApp.readingImagesDlg.Show()
-		defer iApp.readingImagesDlg.Hide()
 
 		filepath := f.URI().Path()
 		imgs, err := imgutil.ReadImgs(filepath)
@@ -415,13 +403,6 @@ func (iApp *ImgpackApp) addAction() {
 
 		iApp.opTable.Insert(imgs...)
 	}, iApp.mainWindow)
-
-	dlg.SetFilter(storage.NewExtensionFileFilter(slices.Concat(
-		imgutil.SupportedImageExts,
-		imgutil.SupportedArchiveExts,
-		imgutil.SupportedPDFExts)))
-	dlg.Resize(fyne.NewSize(600, 600))
-	dlg.Show()
 }
 
 func (iApp *ImgpackApp) downloadAction() {
@@ -430,21 +411,11 @@ func (iApp *ImgpackApp) downloadAction() {
 	}
 
 	img := iApp.opTable.GetSelectedImg()
-	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
-		if err != nil {
-			dialog.ShowError(err, iApp.mainWindow)
-			return
-		}
-
-		if f == nil {
-			log.Println("Cancelled")
-			return
-		}
-
+	saveImgFile(img.Filename+".jpg", func(f fyne.URIWriteCloser) {
 		iApp.savingDlg.Show()
 		defer iApp.savingDlg.Hide()
 
-		err = imgutil.SaveImg(img, f, getPreferenceJPGQuality())
+		err := imgutil.SaveImg(img, f, getPreferenceJPGQuality())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
@@ -453,11 +424,6 @@ func (iApp *ImgpackApp) downloadAction() {
 
 		iApp.stateBar.SetText("Saved successfully")
 	}, iApp.mainWindow)
-
-	dlg.SetFileName(img.Filename + ".jpg")
-	dlg.SetFilter(storage.NewExtensionFileFilter(imgutil.SupportedImageExts))
-	dlg.Resize(fyne.NewSize(600, 600))
-	dlg.Show()
 }
 
 func (iApp *ImgpackApp) deleteAction() {
@@ -482,21 +448,11 @@ func (iApp *ImgpackApp) saveAction() {
 		return
 	}
 
-	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
-		if err != nil {
-			dialog.ShowError(err, iApp.mainWindow)
-			return
-		}
-
-		if f == nil {
-			log.Println("Cancelled")
-			return
-		}
-
+	saveArchiveFile("output.cbz", func(f fyne.URIWriteCloser) {
 		iApp.savingDlg.Show()
 		defer iApp.savingDlg.Hide()
 
-		err = imgutil.SaveImgsAsZip(
+		err := imgutil.SaveImgsAsZip(
 			iApp.opTable.GetImgs(), f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
@@ -508,11 +464,6 @@ func (iApp *ImgpackApp) saveAction() {
 
 		iApp.stateBar.SetText("Saved successfully")
 	}, iApp.mainWindow)
-
-	dlg.SetFileName("output.cbz")
-	dlg.SetFilter(storage.NewExtensionFileFilter(imgutil.SupportedArchiveExts))
-	dlg.Resize(fyne.NewSize(600, 600))
-	dlg.Show()
 }
 
 func (iApp *ImgpackApp) rotateAction() {
