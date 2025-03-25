@@ -33,6 +33,8 @@ type ImgpackApp struct {
 	fApp       fyne.App
 	mainWindow fyne.Window
 
+	toolbar *widget.Toolbar
+
 	stateBar      *widget.Label
 	imgListWidget *widget.List
 	imgShow       *canvas.Image
@@ -67,25 +69,35 @@ func NewImgpackApp() *ImgpackApp {
 
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
 
+	retApp.setupDialogs()
+	retApp.setupToolbar()
+	retApp.setupContent()
+
+	return retApp
+}
+
+func (iApp *ImgpackApp) setupDialogs() {
 	readingImagesDlg := dialog.NewCustomWithoutButtons(
-		"Reading images...", widget.NewProgressBarInfinite(), mainWindow)
-	retApp.readingImagesDlg = readingImagesDlg
+		"Reading images...", widget.NewProgressBarInfinite(), iApp.mainWindow)
+	iApp.readingImagesDlg = readingImagesDlg
 
 	savingDlg := dialog.NewCustomWithoutButtons(
-		"Saving...", widget.NewProgressBarInfinite(), mainWindow)
-	retApp.savingDlg = savingDlg
+		"Saving...", widget.NewProgressBarInfinite(), iApp.mainWindow)
+	iApp.savingDlg = savingDlg
+}
 
-	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), retApp.toolbarAddAction)
-	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), retApp.toolbarDeleteAction)
-	dupImgsToolbarAction := widget.NewToolbarAction(theme.ContentCopyIcon(), retApp.toolbarDupAction)
-	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), retApp.toolbarMoveUpAction)
-	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), retApp.toolbarMoveDownAction)
-	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), retApp.toolbarDownloadAction)
+func (iApp *ImgpackApp) setupToolbar() {
+	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), iApp.toolbarAddAction)
+	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), iApp.toolbarDeleteAction)
+	dupImgsToolbarAction := widget.NewToolbarAction(theme.ContentCopyIcon(), iApp.toolbarDupAction)
+	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), iApp.toolbarMoveUpAction)
+	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), iApp.toolbarMoveDownAction)
+	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), iApp.toolbarDownloadAction)
 
-	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), retApp.toolbarRotateAction)
-	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), retApp.toolbarCutAction)
+	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), iApp.toolbarRotateAction)
+	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), iApp.toolbarCutAction)
 
-	retApp.enableOnSelectImageToolbarActions = []*widget.ToolbarAction{
+	iApp.enableOnSelectImageToolbarActions = []*widget.ToolbarAction{
 		delImgsToolbarAction,
 		dupImgsToolbarAction,
 		moveUpImgsToolbarAction,
@@ -95,13 +107,13 @@ func NewImgpackApp() *ImgpackApp {
 		cutImgToolbarAction,
 	}
 
-	for _, action := range retApp.enableOnSelectImageToolbarActions {
+	for _, action := range iApp.enableOnSelectImageToolbarActions {
 		action.Disable()
 	}
 
-	toolbar := widget.NewToolbar(
-		widget.NewToolbarAction(theme.DocumentCreateIcon(), retApp.toolbarClearAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), retApp.toolbarSaveAction),
+	iApp.toolbar = widget.NewToolbar(
+		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.toolbarClearAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.toolbarSaveAction),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
@@ -114,7 +126,7 @@ func NewImgpackApp() *ImgpackApp {
 		cutImgToolbarAction,
 		widget.NewToolbarSpacer(),
 		widget.NewToolbarAction(theme.SettingsIcon(), func() {
-			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), mainWindow)
+			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), iApp.mainWindow)
 			dlg.Resize(fyne.NewSize(400, 300))
 			dlg.Show()
 		}),
@@ -124,40 +136,40 @@ func NewImgpackApp() *ImgpackApp {
 				widget.NewHyperlink("Github", docURL),
 			}
 
-			dialogx.ShowAbout(appDescription, links, fApp, mainWindow)
+			dialogx.ShowAbout(appDescription, links, iApp.fApp, iApp.mainWindow)
 		}),
 	)
+}
 
+func (iApp *ImgpackApp) setupContent() {
 	imgListWidget := widget.NewList(
 		func() int {
-			return len(retApp.imgs)
+			return len(iApp.imgs)
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("Item")
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(retApp.imgs[i].Filename)
+			o.(*widget.Label).SetText(iApp.imgs[i].Filename)
 		},
 	)
-	imgListWidget.OnSelected = retApp.onSelectImageURI
-	retApp.imgListWidget = imgListWidget
+	imgListWidget.OnSelected = iApp.onSelectImageURI
+	iApp.imgListWidget = imgListWidget
 
 	imgShow := canvas.NewImageFromImage(assets.ImgPlaceholder)
 	imgShow.FillMode = canvas.ImageFillContain
-	retApp.imgShow = imgShow
+	iApp.imgShow = imgShow
 
 	hSplit := container.NewHSplit(imgListWidget, imgShow)
 	hSplit.SetOffset(0.25)
 
 	stateBar := widget.NewLabel("Ready")
-	retApp.stateBar = stateBar
+	iApp.stateBar = stateBar
 
-	content := container.NewBorder(toolbar,
+	content := container.NewBorder(iApp.toolbar,
 		stateBar, nil, nil, hSplit)
 
-	mainWindow.SetContent(content)
-
-	return retApp
+	iApp.mainWindow.SetContent(content)
 }
 
 func (iApp *ImgpackApp) Run() {
