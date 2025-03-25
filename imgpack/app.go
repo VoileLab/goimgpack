@@ -94,16 +94,53 @@ func (iApp *ImgpackApp) setupDialogs() {
 }
 
 func (iApp *ImgpackApp) setupMenu() {
-	addImgsMenuItem := fyne.NewMenuItem("Add", iApp.addAction)
-	addImgsMenuItem.Icon = theme.ContentAddIcon()
+	addImgsMenuItem := &fyne.MenuItem{
+		Label:  "Add",
+		Action: iApp.addAction,
+		Icon:   theme.ContentAddIcon(),
+	}
 
-	delImgsMenuItem := fyne.NewMenuItem("Delete", iApp.deleteAction)
-	dupImgsMenuItem := fyne.NewMenuItem("Duplicate", iApp.dupAction)
-	moveUpImgsMenuItem := fyne.NewMenuItem("Move Up", iApp.moveUpAction)
-	moveDownImgsMenuItem := fyne.NewMenuItem("Move Down", iApp.moveDownAction)
-	downloadImgsMenuItem := fyne.NewMenuItem("Download", iApp.downloadAction)
-	rotateImgsMenuItem := fyne.NewMenuItem("Rotate", iApp.rotateAction)
-	cutImgMenuItem := fyne.NewMenuItem("Cut", iApp.cutAction)
+	delImgsMenuItem := &fyne.MenuItem{
+		Label:  "Delete",
+		Action: iApp.deleteAction,
+		Icon:   theme.DeleteIcon(),
+	}
+
+	dupImgsMenuItem := &fyne.MenuItem{
+		Label:  "Duplicate",
+		Action: iApp.dupAction,
+		Icon:   theme.ContentCopyIcon(),
+	}
+
+	moveUpImgsMenuItem := &fyne.MenuItem{
+		Label:  "Move Up",
+		Action: iApp.moveUpAction,
+		Icon:   theme.MoveUpIcon(),
+	}
+
+	moveDownImgsMenuItem := &fyne.MenuItem{
+		Label:  "Move Down",
+		Action: iApp.moveDownAction,
+		Icon:   theme.MoveDownIcon(),
+	}
+
+	downloadImgsMenuItem := &fyne.MenuItem{
+		Label:  "Download",
+		Action: iApp.downloadAction,
+		Icon:   theme.DownloadIcon(),
+	}
+
+	rotateImgsMenuItem := &fyne.MenuItem{
+		Label:  "Rotate",
+		Action: iApp.rotateAction,
+		Icon:   theme.MediaReplayIcon(),
+	}
+
+	cutImgMenuItem := &fyne.MenuItem{
+		Label:  "Cut",
+		Action: iApp.cutAction,
+		Icon:   theme.ContentCutIcon(),
+	}
 
 	iApp.enableOnSelectImageEnables = append(
 		iApp.enableOnSelectImageEnables,
@@ -119,8 +156,22 @@ func (iApp *ImgpackApp) setupMenu() {
 
 	menu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
-			fyne.NewMenuItem("Clear", iApp.clearAction),
-			fyne.NewMenuItem("Save", iApp.saveAction),
+			&fyne.MenuItem{
+				Label:  "Clear",
+				Icon:   theme.DocumentCreateIcon(),
+				Action: iApp.clearAction,
+			},
+			&fyne.MenuItem{
+				Label:  "Save",
+				Icon:   theme.DocumentSaveIcon(),
+				Action: iApp.saveAction,
+			},
+			fyne.NewMenuItemSeparator(),
+			&fyne.MenuItem{
+				Label:  "Quit",
+				Icon:   theme.CancelIcon(),
+				Action: iApp.fApp.Quit,
+			},
 		),
 		fyne.NewMenu("Edit",
 			addImgsMenuItem,
@@ -134,8 +185,16 @@ func (iApp *ImgpackApp) setupMenu() {
 			cutImgMenuItem,
 		),
 		fyne.NewMenu("Help",
-			fyne.NewMenuItem("Preferences", iApp.showPreferences),
-			fyne.NewMenuItem("About", iApp.showAbout),
+			&fyne.MenuItem{
+				Label:  "Preferences",
+				Icon:   theme.SettingsIcon(),
+				Action: iApp.showPreferences,
+			},
+			&fyne.MenuItem{
+				Label:  "About",
+				Icon:   theme.HelpIcon(),
+				Action: iApp.showAbout,
+			},
 		),
 	)
 
