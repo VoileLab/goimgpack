@@ -43,7 +43,7 @@ type ImgpackApp struct {
 
 	imgs []*imgutil.Image
 
-	enableOnSelectImageToolbarActions []*widget.ToolbarAction
+	enableOnSelectImageEnables []Enablable
 
 	// reading progress dialog
 	readingImagesDlg dialog.Dialog
@@ -69,9 +69,16 @@ func NewImgpackApp() *ImgpackApp {
 
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
 
+	retApp.enableOnSelectImageEnables = []Enablable{}
+
 	retApp.setupDialogs()
+	retApp.setupMenu()
 	retApp.setupToolbar()
 	retApp.setupContent()
+
+	for _, action := range retApp.enableOnSelectImageEnables {
+		action.Disable()
+	}
 
 	return retApp
 }
@@ -86,18 +93,68 @@ func (iApp *ImgpackApp) setupDialogs() {
 	iApp.savingDlg = savingDlg
 }
 
+func (iApp *ImgpackApp) setupMenu() {
+	addImgsMenuItem := fyne.NewMenuItem("Add", iApp.addAction)
+	addImgsMenuItem.Icon = theme.ContentAddIcon()
+
+	delImgsMenuItem := fyne.NewMenuItem("Delete", iApp.deleteAction)
+	dupImgsMenuItem := fyne.NewMenuItem("Duplicate", iApp.dupAction)
+	moveUpImgsMenuItem := fyne.NewMenuItem("Move Up", iApp.moveUpAction)
+	moveDownImgsMenuItem := fyne.NewMenuItem("Move Down", iApp.moveDownAction)
+	downloadImgsMenuItem := fyne.NewMenuItem("Download", iApp.downloadAction)
+	rotateImgsMenuItem := fyne.NewMenuItem("Rotate", iApp.rotateAction)
+	cutImgMenuItem := fyne.NewMenuItem("Cut", iApp.cutAction)
+
+	iApp.enableOnSelectImageEnables = append(
+		iApp.enableOnSelectImageEnables,
+		&EnablableWrapMenuItem{addImgsMenuItem},
+		&EnablableWrapMenuItem{delImgsMenuItem},
+		&EnablableWrapMenuItem{dupImgsMenuItem},
+		&EnablableWrapMenuItem{moveUpImgsMenuItem},
+		&EnablableWrapMenuItem{moveDownImgsMenuItem},
+		&EnablableWrapMenuItem{downloadImgsMenuItem},
+		&EnablableWrapMenuItem{rotateImgsMenuItem},
+		&EnablableWrapMenuItem{cutImgMenuItem},
+	)
+
+	menu := fyne.NewMainMenu(
+		fyne.NewMenu("File",
+			fyne.NewMenuItem("Clear", iApp.clearAction),
+			fyne.NewMenuItem("Save", iApp.saveAction),
+		),
+		fyne.NewMenu("Edit",
+			addImgsMenuItem,
+			delImgsMenuItem,
+			dupImgsMenuItem,
+			moveUpImgsMenuItem,
+			moveDownImgsMenuItem,
+			downloadImgsMenuItem,
+			fyne.NewMenuItemSeparator(),
+			rotateImgsMenuItem,
+			cutImgMenuItem,
+		),
+		fyne.NewMenu("Help",
+			fyne.NewMenuItem("Preferences", iApp.showPreferences),
+			fyne.NewMenuItem("About", iApp.showAbout),
+		),
+	)
+
+	iApp.mainWindow.SetMainMenu(menu)
+}
+
 func (iApp *ImgpackApp) setupToolbar() {
-	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), iApp.toolbarAddAction)
-	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), iApp.toolbarDeleteAction)
-	dupImgsToolbarAction := widget.NewToolbarAction(theme.ContentCopyIcon(), iApp.toolbarDupAction)
-	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), iApp.toolbarMoveUpAction)
-	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), iApp.toolbarMoveDownAction)
-	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), iApp.toolbarDownloadAction)
+	addImgsToolbarAction := widget.NewToolbarAction(theme.ContentAddIcon(), iApp.addAction)
+	delImgsToolbarAction := widget.NewToolbarAction(theme.DeleteIcon(), iApp.deleteAction)
+	dupImgsToolbarAction := widget.NewToolbarAction(theme.ContentCopyIcon(), iApp.dupAction)
+	moveUpImgsToolbarAction := widget.NewToolbarAction(theme.MoveUpIcon(), iApp.moveUpAction)
+	moveDownImgsToolbarAction := widget.NewToolbarAction(theme.MoveDownIcon(), iApp.moveDownAction)
+	downloadImgsToolbarAction := widget.NewToolbarAction(theme.DownloadIcon(), iApp.downloadAction)
 
-	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), iApp.toolbarRotateAction)
-	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), iApp.toolbarCutAction)
+	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), iApp.rotateAction)
+	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), iApp.cutAction)
 
-	iApp.enableOnSelectImageToolbarActions = []*widget.ToolbarAction{
+	iApp.enableOnSelectImageEnables = append(
+		iApp.enableOnSelectImageEnables,
 		delImgsToolbarAction,
 		dupImgsToolbarAction,
 		moveUpImgsToolbarAction,
@@ -105,15 +162,11 @@ func (iApp *ImgpackApp) setupToolbar() {
 		downloadImgsToolbarAction,
 		rotateImgsToolbarAction,
 		cutImgToolbarAction,
-	}
-
-	for _, action := range iApp.enableOnSelectImageToolbarActions {
-		action.Disable()
-	}
+	)
 
 	iApp.toolbar = widget.NewToolbar(
-		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.toolbarClearAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.toolbarSaveAction),
+		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.clearAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveAction),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
@@ -125,19 +178,8 @@ func (iApp *ImgpackApp) setupToolbar() {
 		rotateImgsToolbarAction,
 		cutImgToolbarAction,
 		widget.NewToolbarSpacer(),
-		widget.NewToolbarAction(theme.SettingsIcon(), func() {
-			dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), iApp.mainWindow)
-			dlg.Resize(fyne.NewSize(400, 300))
-			dlg.Show()
-		}),
-		widget.NewToolbarAction(theme.HelpIcon(), func() {
-			docURL, _ := url.Parse(appURL)
-			links := []*widget.Hyperlink{
-				widget.NewHyperlink("Github", docURL),
-			}
-
-			dialogx.ShowAbout(appDescription, links, iApp.fApp, iApp.mainWindow)
-		}),
+		widget.NewToolbarAction(theme.SettingsIcon(), iApp.showPreferences),
+		widget.NewToolbarAction(theme.HelpIcon(), iApp.showAbout),
 	)
 }
 
@@ -174,6 +216,21 @@ func (iApp *ImgpackApp) setupContent() {
 
 func (iApp *ImgpackApp) Run() {
 	iApp.mainWindow.ShowAndRun()
+}
+
+func (iApp *ImgpackApp) showPreferences() {
+	dlg := dialog.NewCustom("Preference", "OK", preferenceContent(), iApp.mainWindow)
+	dlg.Resize(fyne.NewSize(400, 300))
+	dlg.Show()
+}
+
+func (iApp *ImgpackApp) showAbout() {
+	docURL, _ := url.Parse(appURL)
+	links := []*widget.Hyperlink{
+		widget.NewHyperlink("Github", docURL),
+	}
+
+	dialogx.ShowAbout(appDescription, links, iApp.fApp, iApp.mainWindow)
 }
 
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
@@ -226,13 +283,13 @@ func (iApp *ImgpackApp) clearSelected() bool {
 	iApp.imgListWidget.UnselectAll()
 	iApp.imgListWidget.Refresh()
 
-	for _, action := range iApp.enableOnSelectImageToolbarActions {
+	for _, action := range iApp.enableOnSelectImageEnables {
 		action.Disable()
 	}
 	return true
 }
 
-func (iApp *ImgpackApp) toolbarClearAction() {
+func (iApp *ImgpackApp) clearAction() {
 	if len(iApp.imgs) == 0 {
 		return
 	}
@@ -247,7 +304,7 @@ func (iApp *ImgpackApp) toolbarClearAction() {
 		iApp.mainWindow)
 }
 
-func (iApp *ImgpackApp) toolbarAddAction() {
+func (iApp *ImgpackApp) addAction() {
 	dlg := dialog.NewFileOpen(func(f fyne.URIReadCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
@@ -292,7 +349,7 @@ func (iApp *ImgpackApp) toolbarAddAction() {
 	dlg.Show()
 }
 
-func (iApp *ImgpackApp) toolbarDownloadAction() {
+func (iApp *ImgpackApp) downloadAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -332,7 +389,7 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	iApp.selectedImgIdx = &id
 	img := iApp.imgs[id]
 
-	for _, action := range iApp.enableOnSelectImageToolbarActions {
+	for _, action := range iApp.enableOnSelectImageEnables {
 		action.Enable()
 	}
 
@@ -346,7 +403,7 @@ func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	iApp.imgShow.Refresh()
 }
 
-func (iApp *ImgpackApp) toolbarDeleteAction() {
+func (iApp *ImgpackApp) deleteAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -362,7 +419,7 @@ func (iApp *ImgpackApp) toolbarDeleteAction() {
 	}
 }
 
-func (iApp *ImgpackApp) toolbarDupAction() {
+func (iApp *ImgpackApp) dupAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -376,7 +433,7 @@ func (iApp *ImgpackApp) toolbarDupAction() {
 	iApp.imgListWidget.Refresh()
 }
 
-func (iApp *ImgpackApp) toolbarMoveUpAction() {
+func (iApp *ImgpackApp) moveUpAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -392,7 +449,7 @@ func (iApp *ImgpackApp) toolbarMoveUpAction() {
 	iApp.imgListWidget.Select(idx - 1)
 }
 
-func (iApp *ImgpackApp) toolbarMoveDownAction() {
+func (iApp *ImgpackApp) moveDownAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -408,7 +465,7 @@ func (iApp *ImgpackApp) toolbarMoveDownAction() {
 	iApp.imgListWidget.Select(idx + 1)
 }
 
-func (iApp *ImgpackApp) toolbarSaveAction() {
+func (iApp *ImgpackApp) saveAction() {
 	if len(iApp.imgs) == 0 {
 		iApp.stateBar.SetText("No image to save")
 		return
@@ -446,7 +503,7 @@ func (iApp *ImgpackApp) toolbarSaveAction() {
 	dlg.Show()
 }
 
-func (iApp *ImgpackApp) toolbarRotateAction() {
+func (iApp *ImgpackApp) rotateAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
@@ -457,7 +514,7 @@ func (iApp *ImgpackApp) toolbarRotateAction() {
 	iApp.imgShow.Refresh()
 }
 
-func (iApp *ImgpackApp) toolbarCutAction() {
+func (iApp *ImgpackApp) cutAction() {
 	if iApp.selectedImgIdx == nil {
 		return
 	}
