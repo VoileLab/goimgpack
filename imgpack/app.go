@@ -331,6 +331,9 @@ func (iApp *ImgpackApp) showAbout() {
 }
 
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
+	iApp.readingImagesDlg.Show()
+	defer iApp.readingImagesDlg.Hide()
+
 	accImgs := []*imgutil.Image{}
 
 	for _, file := range files {
