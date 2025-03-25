@@ -61,6 +61,44 @@ func NewImgpackApp() *ImgpackApp {
 		opTable: imgstable.New(),
 	}
 
+	retApp.opTable.SetOnSelectIndexChange(func() {
+		if !retApp.opTable.IsSelected() {
+			retApp.imgShow.Resource = nil
+			retApp.imgShow.Image = assets.ImgPlaceholder
+			retApp.imgShow.Refresh()
+			retApp.imgListWidget.UnselectAll()
+			retApp.imgListWidget.Refresh()
+			return
+		}
+
+		img := retApp.opTable.GetSelectedImg()
+
+		for _, action := range retApp.enableOnSelectImageEnables {
+			action.Enable()
+		}
+
+		bound := img.Img.Bounds()
+		imgDesc := fmt.Sprintf("filename: %s, format: %s, size: %dx%d",
+			img.Filename, img.Type, bound.Dx(), bound.Dy())
+
+		retApp.stateBar.SetText(imgDesc)
+
+		retApp.imgShow.Resource = nil
+		retApp.imgShow.Image = img.Img
+		retApp.imgShow.Refresh()
+
+		retApp.imgListWidget.Select(retApp.opTable.GetSelectedIdx())
+	})
+
+	retApp.opTable.SetOnSelectImageChange(func() {
+		retApp.imgShow.Image = retApp.opTable.GetSelectedImg().Img
+		retApp.imgShow.Refresh()
+	})
+
+	retApp.opTable.SetOnListChange(func() {
+		retApp.imgListWidget.Refresh()
+	})
+
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
 		retApp.dropFiles(u)
 	})
@@ -252,7 +290,11 @@ func (iApp *ImgpackApp) setupContent() {
 			o.(*widget.Label).SetText(iApp.opTable.Get(i).Filename)
 		},
 	)
-	imgListWidget.OnSelected = iApp.onSelectImageURI
+
+	imgListWidget.OnSelected = func(id widget.ListItemID) {
+		iApp.opTable.Select(int(id))
+	}
+
 	iApp.imgListWidget = imgListWidget
 
 	imgShow := canvas.NewImageFromImage(assets.ImgPlaceholder)
@@ -291,6 +333,8 @@ func (iApp *ImgpackApp) showAbout() {
 }
 
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
+	accImgs := []*imgutil.Image{}
+
 	for _, file := range files {
 		imgs, err := imgutil.ReadImgs(file.Path())
 		if err != nil {
@@ -298,10 +342,11 @@ func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 			continue
 		}
 
-		iApp.opTable.Insert(imgs...)
+		accImgs = append(accImgs, imgs...)
+
 	}
 
-	iApp.imgListWidget.Refresh()
+	iApp.opTable.Insert(accImgs...)
 }
 
 func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
@@ -327,20 +372,6 @@ func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 	}
 }
 
-func (iApp *ImgpackApp) clearSelected() bool {
-	iApp.opTable.Unselect()
-	iApp.imgShow.Resource = nil
-	iApp.imgShow.Image = assets.ImgPlaceholder
-	iApp.imgShow.Refresh()
-	iApp.imgListWidget.UnselectAll()
-	iApp.imgListWidget.Refresh()
-
-	for _, action := range iApp.enableOnSelectImageEnables {
-		action.Disable()
-	}
-	return true
-}
-
 func (iApp *ImgpackApp) clearAction() {
 	if iApp.opTable.Len() == 0 {
 		return
@@ -350,7 +381,6 @@ func (iApp *ImgpackApp) clearAction() {
 		func(b bool) {
 			if b {
 				iApp.opTable.Clear()
-				iApp.clearSelected()
 			}
 		},
 		iApp.mainWindow)
@@ -384,7 +414,6 @@ func (iApp *ImgpackApp) addAction() {
 		}
 
 		iApp.opTable.Insert(imgs...)
-		iApp.imgListWidget.Refresh()
 	}, iApp.mainWindow)
 
 	dlg.SetFilter(storage.NewExtensionFileFilter(slices.Concat(
@@ -431,61 +460,20 @@ func (iApp *ImgpackApp) downloadAction() {
 	dlg.Show()
 }
 
-func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
-	iApp.opTable.Select(int(id))
-	img := iApp.opTable.GetSelectedImg()
-
-	for _, action := range iApp.enableOnSelectImageEnables {
-		action.Enable()
-	}
-
-	bound := img.Img.Bounds()
-	imgDesc := fmt.Sprintf("filename: %s, format: %s, size: %dx%d",
-		img.Filename, img.Type, bound.Dx(), bound.Dy())
-	iApp.stateBar.SetText(imgDesc)
-
-	iApp.imgShow.Resource = nil
-	iApp.imgShow.Image = img.Img
-	iApp.imgShow.Refresh()
-}
-
 func (iApp *ImgpackApp) deleteAction() {
-	if !iApp.opTable.IsSelected() {
-		return
-	}
-
-	idx := iApp.opTable.GetSelectedIdx()
 	iApp.opTable.Delete()
-	iApp.imgListWidget.Refresh()
-
-	if idx >= iApp.opTable.Len() {
-		iApp.clearSelected()
-	} else {
-		iApp.onSelectImageURI(idx)
-	}
 }
 
 func (iApp *ImgpackApp) dupAction() {
 	iApp.opTable.Duplicate()
-	iApp.imgListWidget.Refresh()
 }
 
 func (iApp *ImgpackApp) moveUpAction() {
-	if !iApp.opTable.IsSelected() {
-		return
-	}
-
 	iApp.opTable.MoveUp()
-	iApp.imgListWidget.Select(iApp.opTable.GetSelectedIdx())
 }
 
 func (iApp *ImgpackApp) moveDownAction() {
-	if !iApp.opTable.IsSelected() {
-		return
-	}
-
 	iApp.opTable.MoveDown()
-	iApp.imgListWidget.Select(iApp.opTable.GetSelectedIdx())
 }
 
 func (iApp *ImgpackApp) saveAction() {
@@ -528,24 +516,9 @@ func (iApp *ImgpackApp) saveAction() {
 }
 
 func (iApp *ImgpackApp) rotateAction() {
-	if !iApp.opTable.IsSelected() {
-		return
-	}
-
 	iApp.opTable.Rotate()
-
-	iApp.imgShow.Image = iApp.opTable.GetSelectedImg().Img
-	iApp.imgShow.Refresh()
 }
 
 func (iApp *ImgpackApp) cutAction() {
-	if !iApp.opTable.IsSelected() {
-		return
-	}
-
 	iApp.opTable.Cut()
-
-	iApp.imgListWidget.Refresh()
-	iApp.imgShow.Image = iApp.opTable.GetSelectedImg().Img
-	iApp.imgShow.Refresh()
 }
