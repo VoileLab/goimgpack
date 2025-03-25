@@ -66,6 +66,11 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.imgShow.Refresh()
 			retApp.imgListWidget.UnselectAll()
 			retApp.imgListWidget.Refresh()
+
+			for _, action := range retApp.enableOnSelectImageEnables {
+				action.Disable()
+			}
+
 			return
 		}
 
