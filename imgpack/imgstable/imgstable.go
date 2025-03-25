@@ -1,4 +1,4 @@
-package imgpack
+package imgstable
 
 import (
 	"image"
@@ -13,7 +13,27 @@ type ImgsTable struct {
 	imgs   []*imgutil.Image
 }
 
+func New() *ImgsTable {
+	return &ImgsTable{}
+}
+
+func (t *ImgsTable) Len() int {
+	return len(t.imgs)
+}
+
+func (t *ImgsTable) Get(idx int) *imgutil.Image {
+	return t.imgs[idx]
+}
+
+func (t *ImgsTable) GetImgs() []*imgutil.Image {
+	return t.imgs
+}
+
 func (t *ImgsTable) Select(idx int) {
+	if idx < 0 || idx >= len(t.imgs) {
+		return
+	}
+
 	t.selIdx = &idx
 }
 
@@ -21,7 +41,11 @@ func (t *ImgsTable) IsSelected() bool {
 	return t.selIdx != nil
 }
 
-func (t *ImgsTable) GetSelected() *imgutil.Image {
+func (t *ImgsTable) GetSelectedIdx() int {
+	return *t.selIdx
+}
+
+func (t *ImgsTable) GetSelectedImg() *imgutil.Image {
 	if t.selIdx == nil {
 		return nil
 	}
@@ -33,6 +57,7 @@ func (t *ImgsTable) Unselect() {
 	t.selIdx = nil
 }
 
+// Insert inserts images at the selected position of the table.
 func (t *ImgsTable) Insert(imgs ...*imgutil.Image) {
 	if t.selIdx == nil {
 		t.imgs = append(t.imgs, imgs...)
@@ -43,13 +68,12 @@ func (t *ImgsTable) Insert(imgs ...*imgutil.Image) {
 	t.imgs = slices.Insert(t.imgs, idx+1, imgs...)
 }
 
+// Clear removes all images from the table.
 func (t *ImgsTable) Clear() {
 	t.imgs = nil
 }
 
-func (t *ImgsTable) Remove(idx int) {
-}
-
+// Delete removes the selected image from the table.
 func (t *ImgsTable) Delete() {
 	if t.selIdx == nil {
 		return
@@ -57,8 +81,13 @@ func (t *ImgsTable) Delete() {
 
 	idx := *t.selIdx
 	t.imgs = slices.Delete(t.imgs, idx, idx+1)
+
+	if idx >= len(t.imgs) {
+		t.selIdx = nil
+	}
 }
 
+// Duplicate duplicates the selected image.
 func (t *ImgsTable) Duplicate() {
 	if t.selIdx == nil {
 		return
@@ -72,6 +101,7 @@ func (t *ImgsTable) Duplicate() {
 	t.imgs = slices.Insert(t.imgs, idx+1, newImg)
 }
 
+// MoveUp moves the selected image up.
 func (t *ImgsTable) MoveUp() {
 	if t.selIdx == nil {
 		return
@@ -90,6 +120,7 @@ func (t *ImgsTable) MoveUp() {
 	t.selIdx = &idx
 }
 
+// MoveDown moves the selected image down.
 func (t *ImgsTable) MoveDown() {
 	if t.selIdx == nil {
 		return
@@ -108,6 +139,7 @@ func (t *ImgsTable) MoveDown() {
 	t.selIdx = &idx
 }
 
+// Rotate rotates the selected image 90 degrees clockwise.
 func (t *ImgsTable) Rotate() {
 	if t.selIdx == nil {
 		return
@@ -117,6 +149,8 @@ func (t *ImgsTable) Rotate() {
 	img.Img = imaging.Rotate90(img.Img)
 }
 
+// Cut cuts the selected image in half and
+// inserts the second half after the selected image.
 func (t *ImgsTable) Cut() {
 	if t.selIdx == nil {
 		return

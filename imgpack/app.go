@@ -18,6 +18,7 @@ import (
 	dialogx "fyne.io/x/fyne/dialog"
 
 	"github.com/VoileLab/goimgpack/imgpack/assets"
+	"github.com/VoileLab/goimgpack/imgpack/imgstable"
 	"github.com/VoileLab/goimgpack/internal/imgutil"
 )
 
@@ -36,7 +37,7 @@ type ImgpackApp struct {
 	imgListWidget *widget.List
 	imgShow       *canvas.Image
 
-	opTable *ImgsTable
+	opTable *imgstable.ImgsTable
 
 	enableOnSelectImageEnables []Enablable
 
@@ -57,7 +58,7 @@ func NewImgpackApp() *ImgpackApp {
 		fApp:       fApp,
 		mainWindow: mainWindow,
 
-		opTable: &ImgsTable{},
+		opTable: imgstable.New(),
 	}
 
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
@@ -242,13 +243,13 @@ func (iApp *ImgpackApp) setupToolbar() {
 func (iApp *ImgpackApp) setupContent() {
 	imgListWidget := widget.NewList(
 		func() int {
-			return len(iApp.opTable.imgs)
+			return iApp.opTable.Len()
 		},
 		func() fyne.CanvasObject {
 			return widget.NewLabel("Item")
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(iApp.opTable.imgs[i].Filename)
+			o.(*widget.Label).SetText(iApp.opTable.Get(i).Filename)
 		},
 	)
 	imgListWidget.OnSelected = iApp.onSelectImageURI
@@ -304,21 +305,21 @@ func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 }
 
 func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
-	if iApp.opTable.selIdx == nil {
+	if !iApp.opTable.IsSelected() {
 		return
 	}
 
-	idx := *iApp.opTable.selIdx
+	idx := iApp.opTable.GetSelectedIdx()
 
 	switch e.Name {
 	case fyne.KeyUp:
 		if idx > 0 {
 			iApp.imgListWidget.Select(idx - 1)
 		} else {
-			iApp.imgListWidget.Select(len(iApp.opTable.imgs) - 1)
+			iApp.imgListWidget.Select(iApp.opTable.Len() - 1)
 		}
 	case fyne.KeyDown:
-		if idx < len(iApp.opTable.imgs)-1 {
+		if idx < iApp.opTable.Len()-1 {
 			iApp.imgListWidget.Select(idx + 1)
 		} else {
 			iApp.imgListWidget.Select(0)
@@ -341,7 +342,7 @@ func (iApp *ImgpackApp) clearSelected() bool {
 }
 
 func (iApp *ImgpackApp) clearAction() {
-	if len(iApp.opTable.imgs) == 0 {
+	if iApp.opTable.Len() == 0 {
 		return
 	}
 
@@ -399,7 +400,7 @@ func (iApp *ImgpackApp) downloadAction() {
 		return
 	}
 
-	img := iApp.opTable.GetSelected()
+	img := iApp.opTable.GetSelectedImg()
 	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
@@ -432,7 +433,7 @@ func (iApp *ImgpackApp) downloadAction() {
 
 func (iApp *ImgpackApp) onSelectImageURI(id widget.ListItemID) {
 	iApp.opTable.Select(int(id))
-	img := iApp.opTable.GetSelected()
+	img := iApp.opTable.GetSelectedImg()
 
 	for _, action := range iApp.enableOnSelectImageEnables {
 		action.Enable()
@@ -453,11 +454,11 @@ func (iApp *ImgpackApp) deleteAction() {
 		return
 	}
 
-	idx := *iApp.opTable.selIdx
+	idx := iApp.opTable.GetSelectedIdx()
 	iApp.opTable.Delete()
 	iApp.imgListWidget.Refresh()
 
-	if idx >= len(iApp.opTable.imgs) {
+	if idx >= iApp.opTable.Len() {
 		iApp.clearSelected()
 	} else {
 		iApp.onSelectImageURI(idx)
@@ -475,7 +476,7 @@ func (iApp *ImgpackApp) moveUpAction() {
 	}
 
 	iApp.opTable.MoveUp()
-	iApp.imgListWidget.Select(*iApp.opTable.selIdx)
+	iApp.imgListWidget.Select(iApp.opTable.GetSelectedIdx())
 }
 
 func (iApp *ImgpackApp) moveDownAction() {
@@ -484,11 +485,11 @@ func (iApp *ImgpackApp) moveDownAction() {
 	}
 
 	iApp.opTable.MoveDown()
-	iApp.imgListWidget.Select(*iApp.opTable.selIdx)
+	iApp.imgListWidget.Select(iApp.opTable.GetSelectedIdx())
 }
 
 func (iApp *ImgpackApp) saveAction() {
-	if len(iApp.opTable.imgs) == 0 {
+	if iApp.opTable.Len() == 0 {
 		iApp.stateBar.SetText("No image to save")
 		return
 	}
@@ -507,7 +508,8 @@ func (iApp *ImgpackApp) saveAction() {
 		iApp.savingDlg.Show()
 		defer iApp.savingDlg.Hide()
 
-		err = imgutil.SaveImgsAsZip(iApp.opTable.imgs, f,
+		err = imgutil.SaveImgsAsZip(
+			iApp.opTable.GetImgs(), f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
 		if err != nil {
@@ -532,7 +534,7 @@ func (iApp *ImgpackApp) rotateAction() {
 
 	iApp.opTable.Rotate()
 
-	iApp.imgShow.Image = iApp.opTable.GetSelected().Img
+	iApp.imgShow.Image = iApp.opTable.GetSelectedImg().Img
 	iApp.imgShow.Refresh()
 }
 
@@ -544,6 +546,6 @@ func (iApp *ImgpackApp) cutAction() {
 	iApp.opTable.Cut()
 
 	iApp.imgListWidget.Refresh()
-	iApp.imgShow.Image = iApp.opTable.GetSelected().Img
+	iApp.imgShow.Image = iApp.opTable.GetSelectedImg().Img
 	iApp.imgShow.Refresh()
 }
