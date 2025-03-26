@@ -365,15 +365,15 @@ func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 	switch e.Name {
 	case fyne.KeyUp:
 		if idx > 0 {
-			iApp.imgListWidget.Select(idx - 1)
+			iApp.opTable.Select(idx - 1)
 		} else {
-			iApp.imgListWidget.Select(iApp.opTable.Len() - 1)
+			iApp.opTable.Select(iApp.opTable.Len() - 1)
 		}
 	case fyne.KeyDown:
 		if idx < iApp.opTable.Len()-1 {
-			iApp.imgListWidget.Select(idx + 1)
+			iApp.opTable.Select(idx + 1)
 		} else {
-			iApp.imgListWidget.Select(0)
+			iApp.opTable.Select(0)
 		}
 	}
 }
