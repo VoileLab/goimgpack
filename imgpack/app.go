@@ -201,9 +201,14 @@ func (iApp *ImgpackApp) setupMenu() {
 				Action: iApp.clearAction,
 			},
 			&fyne.MenuItem{
-				Label:  "Save",
+				Label:  "Save As Archive",
 				Icon:   theme.DocumentSaveIcon(),
-				Action: iApp.saveAction,
+				Action: iApp.saveArchiveAction,
+			},
+			&fyne.MenuItem{
+				Label:  "Save As PDF",
+				Icon:   theme.DocumentSaveIcon(),
+				Action: iApp.savePDFAction,
 			},
 			fyne.NewMenuItemSeparator(),
 			&fyne.MenuItem{
@@ -264,7 +269,8 @@ func (iApp *ImgpackApp) setupToolbar() {
 
 	iApp.toolbar = widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.clearAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveArchiveAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.savePDFAction),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
@@ -450,7 +456,7 @@ func (iApp *ImgpackApp) moveDownAction() {
 	iApp.opTable.MoveDown()
 }
 
-func (iApp *ImgpackApp) saveAction() {
+func (iApp *ImgpackApp) saveArchiveAction() {
 	if iApp.opTable.Len() == 0 {
 		iApp.stateBar.SetText("No image to save")
 		return
@@ -464,6 +470,28 @@ func (iApp *ImgpackApp) saveAction() {
 			iApp.opTable.GetImgs(), f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			return
+		}
+		f.Close()
+
+		iApp.stateBar.SetText("Saved successfully")
+	}, iApp.mainWindow)
+}
+
+func (iApp *ImgpackApp) savePDFAction() {
+	if iApp.opTable.Len() == 0 {
+		iApp.stateBar.SetText("No image to save")
+		return
+	}
+
+	savePDFFile("output.pdf", func(f fyne.URIWriteCloser) {
+		iApp.savingDlg.Show()
+		defer iApp.savingDlg.Hide()
+
+		err := imgutil.SaveImgsAsPDF(
+			iApp.opTable.GetImgs(), f, getPreferenceJPGQuality())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
