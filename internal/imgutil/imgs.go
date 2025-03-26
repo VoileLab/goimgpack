@@ -158,7 +158,10 @@ func ReadImgsInZip(filename string) ([]*Image, error) {
 		}
 		defer rc.Close()
 
-		img, err := NewImg(rc, f.Name)
+		// prevent directory in filename
+		filename := strings.ReplaceAll(f.Name, "/", "_")
+
+		img, err := NewImg(rc, filename)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
