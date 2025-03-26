@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
+	"path"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -348,7 +350,30 @@ func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 	accImgs := []*imgutil.Image{}
 
 	for _, file := range files {
-		imgs, err := imgutil.ReadImgs(file.Path())
+		fileStat, err := os.Stat(file.Path())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			continue
+		}
+
+		if fileStat.IsDir() {
+			imgs, err := imgutil.ReadImgsInDir(file.Path())
+			if err != nil {
+				dialog.ShowError(err, iApp.mainWindow)
+				continue
+			}
+
+			accImgs = append(accImgs, imgs...)
+			continue
+		}
+
+		f, err := os.Open(file.Path())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			continue
+		}
+
+		imgs, err := imgutil.ReadImgsInFile(f, path.Base(file.Path()))
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			continue
@@ -409,7 +434,7 @@ func (iApp *ImgpackApp) addAction() {
 		}
 
 		filepath := f.URI().Path()
-		imgs, err := imgutil.ReadImgs(filepath)
+		imgs, err := imgutil.ReadImgsInFile(f, path.Base(filepath))
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return

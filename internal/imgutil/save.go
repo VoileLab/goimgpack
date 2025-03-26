@@ -10,6 +10,7 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
+// SaveImg saves an image to a file
 func SaveImg(img *Image, f io.Writer, quality int) error {
 	err := jpeg.Encode(f, img.Img, &jpeg.Options{Quality: quality})
 	if err != nil {
@@ -19,6 +20,7 @@ func SaveImg(img *Image, f io.Writer, quality int) error {
 	return nil
 }
 
+// SaveImgsAsZip saves images as a zip file
 func SaveImgsAsZip(imgs []*Image, f io.Writer, prependDigit bool, quality int) error {
 	zipWriter := zip.NewWriter(f)
 	defer zipWriter.Close()
@@ -43,6 +45,7 @@ func SaveImgsAsZip(imgs []*Image, f io.Writer, prependDigit bool, quality int) e
 	return nil
 }
 
+// SaveImgsAsPDF saves images as a PDF file
 func SaveImgsAsPDF(imgs []*Image, f io.Writer, quality int) error {
 	imgsReader := make([]io.Reader, len(imgs))
 	for i, img := range imgs {

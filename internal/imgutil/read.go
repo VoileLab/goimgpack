@@ -16,31 +16,19 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/model"
 )
 
-func ReadImgs(filename string) ([]*Image, error) {
-	fileStat, err := os.Stat(filename)
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-
-	if fileStat.IsDir() {
-		imgs, err := ReadImgsInDir(filename)
-		if err != nil {
-			return nil, util.Errorf("%w", err)
-		}
-		return imgs, nil
-	}
-
+// ReadImgsInFile reads images from a file
+func ReadImgsInFile(f io.Reader, filename string) ([]*Image, error) {
 	fileExt := filepath.Ext(filename)
 	if slices.Contains(SupportedArchiveExts, fileExt) {
-		imgs, err := ReadImgsInZip(filename)
+		imgs, err := ReadImgsInZip(f)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
 		return imgs, nil
 	}
 
-	if fileExt == ".pdf" {
-		imgs, err := ReadImgsInPDF(filename)
+	if slices.Contains(SupportedPDFExts, fileExt) {
+		imgs, err := ReadImgsInPDF(f)
 		if err != nil {
 			return nil, util.Errorf("%w", err)
 		}
@@ -55,6 +43,7 @@ func ReadImgs(filename string) ([]*Image, error) {
 	return []*Image{img}, nil
 }
 
+// ReadImgsInDir reads images in a directory not recursively
 func ReadImgsInDir(dirpath string) ([]*Image, error) {
 	dir, err := os.ReadDir(dirpath)
 	if err != nil {
@@ -78,12 +67,17 @@ func ReadImgsInDir(dirpath string) ([]*Image, error) {
 	return imgs, nil
 }
 
-func ReadImgsInZip(filename string) ([]*Image, error) {
-	r, err := zip.OpenReader(filename)
+// ReadImgsInZip reads images in a zip file
+func ReadImgsInZip(f io.Reader) ([]*Image, error) {
+	bs, err := io.ReadAll(f)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
-	defer r.Close()
+
+	r, err := zip.NewReader(bytes.NewReader(bs), int64(len(bs)))
+	if err != nil {
+		return nil, util.Errorf("%w", err)
+	}
 
 	imgs := make([]*Image, 0, len(r.File))
 	for _, f := range r.File {
@@ -115,18 +109,13 @@ func ReadImgsInZip(filename string) ([]*Image, error) {
 	return imgs, nil
 }
 
-func ReadImgsInPDF(filename string) ([]*Image, error) {
+// ReadImgsInPDF reads images in a PDF file
+func ReadImgsInPDF(f io.Reader) ([]*Image, error) {
 	conf := model.NewDefaultConfiguration()
 	conf.ValidationMode = model.ValidationRelaxed
 
-	pdfFile, err := os.Open(filename)
-	if err != nil {
-		return nil, util.Errorf("%w", err)
-	}
-	defer pdfFile.Close()
-
 	pdfBuf := new(bytes.Buffer)
-	_, err = io.Copy(pdfBuf, pdfFile)
+	_, err := io.Copy(pdfBuf, f)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}

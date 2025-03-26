@@ -27,6 +27,7 @@ type Image struct {
 	Type string
 }
 
+// NewImgByFilepath creates an Image object from a file path
 func NewImgByFilepath(filepath string) (*Image, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
@@ -37,6 +38,7 @@ func NewImgByFilepath(filepath string) (*Image, error) {
 	return NewImg(f, path.Base(filepath))
 }
 
+// NewImg creates an Image object from an io.Reader
 func NewImg(r io.Reader, filename string) (*Image, error) {
 	img, imgType, err := decodeImage(r)
 	if err != nil {
@@ -53,6 +55,7 @@ func NewImg(r io.Reader, filename string) (*Image, error) {
 	}, nil
 }
 
+// Clone deep copies the image
 func (img *Image) Clone() *Image {
 	bounds := img.Img.Bounds()
 	clone := image.NewRGBA(bounds)
