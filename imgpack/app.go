@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
+	"path"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -66,6 +68,11 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.imgShow.Refresh()
 			retApp.imgListWidget.UnselectAll()
 			retApp.imgListWidget.Refresh()
+
+			for _, action := range retApp.enableOnSelectImageEnables {
+				action.Disable()
+			}
+
 			return
 		}
 
@@ -196,9 +203,14 @@ func (iApp *ImgpackApp) setupMenu() {
 				Action: iApp.clearAction,
 			},
 			&fyne.MenuItem{
-				Label:  "Save",
+				Label:  "Save As Archive",
 				Icon:   theme.DocumentSaveIcon(),
-				Action: iApp.saveAction,
+				Action: iApp.saveArchiveAction,
+			},
+			&fyne.MenuItem{
+				Label:  "Save As PDF",
+				Icon:   theme.DocumentSaveIcon(),
+				Action: iApp.savePDFAction,
 			},
 			fyne.NewMenuItemSeparator(),
 			&fyne.MenuItem{
@@ -259,7 +271,8 @@ func (iApp *ImgpackApp) setupToolbar() {
 
 	iApp.toolbar = widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.clearAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveArchiveAction),
+		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.savePDFAction),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
@@ -337,7 +350,30 @@ func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 	accImgs := []*imgutil.Image{}
 
 	for _, file := range files {
-		imgs, err := imgutil.ReadImgs(file.Path())
+		fileStat, err := os.Stat(file.Path())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			continue
+		}
+
+		if fileStat.IsDir() {
+			imgs, err := imgutil.ReadImgsInDir(file.Path())
+			if err != nil {
+				dialog.ShowError(err, iApp.mainWindow)
+				continue
+			}
+
+			accImgs = append(accImgs, imgs...)
+			continue
+		}
+
+		f, err := os.Open(file.Path())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			continue
+		}
+
+		imgs, err := imgutil.ReadImgsInFile(f, path.Base(file.Path()))
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			continue
@@ -360,15 +396,15 @@ func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 	switch e.Name {
 	case fyne.KeyUp:
 		if idx > 0 {
-			iApp.imgListWidget.Select(idx - 1)
+			iApp.opTable.Select(idx - 1)
 		} else {
-			iApp.imgListWidget.Select(iApp.opTable.Len() - 1)
+			iApp.opTable.Select(iApp.opTable.Len() - 1)
 		}
 	case fyne.KeyDown:
 		if idx < iApp.opTable.Len()-1 {
-			iApp.imgListWidget.Select(idx + 1)
+			iApp.opTable.Select(idx + 1)
 		} else {
-			iApp.imgListWidget.Select(0)
+			iApp.opTable.Select(0)
 		}
 	}
 }
@@ -398,7 +434,7 @@ func (iApp *ImgpackApp) addAction() {
 		}
 
 		filepath := f.URI().Path()
-		imgs, err := imgutil.ReadImgs(filepath)
+		imgs, err := imgutil.ReadImgsInFile(f, path.Base(filepath))
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
@@ -445,7 +481,7 @@ func (iApp *ImgpackApp) moveDownAction() {
 	iApp.opTable.MoveDown()
 }
 
-func (iApp *ImgpackApp) saveAction() {
+func (iApp *ImgpackApp) saveArchiveAction() {
 	if iApp.opTable.Len() == 0 {
 		iApp.stateBar.SetText("No image to save")
 		return
@@ -459,6 +495,28 @@ func (iApp *ImgpackApp) saveAction() {
 			iApp.opTable.GetImgs(), f,
 			getPreferencePrependDigit(),
 			getPreferenceJPGQuality())
+		if err != nil {
+			dialog.ShowError(err, iApp.mainWindow)
+			return
+		}
+		f.Close()
+
+		iApp.stateBar.SetText("Saved successfully")
+	}, iApp.mainWindow)
+}
+
+func (iApp *ImgpackApp) savePDFAction() {
+	if iApp.opTable.Len() == 0 {
+		iApp.stateBar.SetText("No image to save")
+		return
+	}
+
+	savePDFFile("output.pdf", func(f fyne.URIWriteCloser) {
+		iApp.savingDlg.Show()
+		defer iApp.savingDlg.Hide()
+
+		err := imgutil.SaveImgsAsPDF(
+			iApp.opTable.GetImgs(), f, getPreferenceJPGQuality())
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return

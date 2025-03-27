@@ -71,3 +71,23 @@ func saveArchiveFile(defaultName string, cb func(fyne.URIWriteCloser), w fyne.Wi
 	dlg.Resize(fyne.NewSize(600, 600))
 	dlg.Show()
 }
+
+func savePDFFile(defaultName string, cb func(fyne.URIWriteCloser), w fyne.Window) {
+	dlg := dialog.NewFileSave(func(f fyne.URIWriteCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, w)
+			return
+		}
+
+		if f == nil {
+			return
+		}
+
+		cb(f)
+	}, w)
+
+	dlg.SetFileName(defaultName)
+	dlg.SetFilter(storage.NewExtensionFileFilter(imgutil.SupportedPDFExts))
+	dlg.Resize(fyne.NewSize(600, 600))
+	dlg.Show()
+}
