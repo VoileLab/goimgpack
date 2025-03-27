@@ -22,7 +22,6 @@ jobs:
     - name: 'Build and package'
       run: |
         go install github.com/fyne-io/fyne-cross@latest
-        fyne-cross darwin
         fyne-cross windows
         fyne-cross linux
 
