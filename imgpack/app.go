@@ -272,7 +272,7 @@ func (iApp *ImgpackApp) setupToolbar() {
 	iApp.toolbar = widget.NewToolbar(
 		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.clearAction),
 		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveArchiveAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.savePDFAction),
+		widget.NewToolbarAction(assets.AsPdfIcon, iApp.savePDFAction),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
