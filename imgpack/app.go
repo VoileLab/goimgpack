@@ -22,7 +22,6 @@ import (
 	"github.com/VoileLab/goimgpack/internal/imgutil"
 )
 
-const appDescription = "A tool to pack images into an archive file."
 const appURL = "https://github.com/VoileLab/goimgpack"
 
 var appSize = fyne.NewSize(1000, 800)
@@ -41,9 +40,10 @@ type ImgpackApp struct {
 
 	enableOnSelectImageEnables []Enablable
 
-	// reading progress dialog
+	// dialogs
 	readingImagesDlg dialog.Dialog
 	savingDlg        dialog.Dialog
+	aboutDlg         dialog.Dialog
 }
 
 func NewImgpackApp() *ImgpackApp {
@@ -132,6 +132,17 @@ func (iApp *ImgpackApp) setupDialogs() {
 	savingDlg := dialog.NewCustomWithoutButtons(
 		"Saving...", widget.NewProgressBarInfinite(), iApp.mainWindow)
 	iApp.savingDlg = savingDlg
+
+	docURL, _ := url.Parse(appURL)
+	links := []*widget.Hyperlink{
+		widget.NewHyperlink("Github", docURL),
+	}
+
+	aboutDlg := dialogx.NewAbout(
+		assets.AppDescription, links, iApp.fApp, iApp.mainWindow)
+	aboutDlg.Resize(fyne.NewSize(500, 400))
+
+	iApp.aboutDlg = aboutDlg
 }
 
 func (iApp *ImgpackApp) setupMenu() {
@@ -335,12 +346,7 @@ func (iApp *ImgpackApp) showPreferences() {
 }
 
 func (iApp *ImgpackApp) showAbout() {
-	docURL, _ := url.Parse(appURL)
-	links := []*widget.Hyperlink{
-		widget.NewHyperlink("Github", docURL),
-	}
-
-	dialogx.ShowAbout(appDescription, links, iApp.fApp, iApp.mainWindow)
+	iApp.aboutDlg.Show()
 }
 
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {

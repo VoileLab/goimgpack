@@ -20,6 +20,9 @@ var pictureAsPdfBs []byte
 
 var AsPdfIcon fyne.Resource
 
+//go:embed description.md
+var AppDescription string
+
 func init() {
 	img, _, err := image.Decode(bytes.NewReader(imgPlaceholderBs))
 	if err != nil {
