@@ -35,7 +35,7 @@ func ReadImgsInFile(f io.Reader, filename string) ([]*Image, error) {
 		return imgs, nil
 	}
 
-	img, err := NewImgByFilepath(filename)
+	img, err := NewImg(f, filename)
 	if err != nil {
 		return nil, util.Errorf("%w", err)
 	}
