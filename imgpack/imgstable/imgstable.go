@@ -131,6 +131,8 @@ func (t *ImgsTable) Delete() {
 
 	if idx >= len(t.imgs) {
 		t.Unselect()
+	} else {
+		t.onSelectImageChange()
 	}
 }
 
