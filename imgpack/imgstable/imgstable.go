@@ -103,6 +103,7 @@ func (t *ImgsTable) Unselect() {
 func (t *ImgsTable) Insert(imgs ...*imgutil.Image) {
 	if t.selIdx == nil {
 		t.imgs = append(t.imgs, imgs...)
+		t.onListChange()
 		return
 	}
 

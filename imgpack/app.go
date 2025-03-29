@@ -38,7 +38,8 @@ type ImgpackApp struct {
 
 	opTable *imgstable.ImgsTable
 
-	enableOnSelectImageEnables []Enablable
+	enableOnExistImageEnablables  []Enablable
+	enableOnSelectImageEnablables []Enablable
 
 	// dialogs
 	readingImagesDlg dialog.Dialog
@@ -69,7 +70,7 @@ func NewImgpackApp() *ImgpackApp {
 			retApp.imgListWidget.UnselectAll()
 			retApp.imgListWidget.Refresh()
 
-			for _, action := range retApp.enableOnSelectImageEnables {
+			for _, action := range retApp.enableOnSelectImageEnablables {
 				action.Disable()
 			}
 
@@ -78,7 +79,7 @@ func NewImgpackApp() *ImgpackApp {
 
 		img := retApp.opTable.GetSelectedImg()
 
-		for _, action := range retApp.enableOnSelectImageEnables {
+		for _, action := range retApp.enableOnSelectImageEnablables {
 			action.Enable()
 		}
 
@@ -102,6 +103,16 @@ func NewImgpackApp() *ImgpackApp {
 
 	retApp.opTable.SetOnListChange(func() {
 		retApp.imgListWidget.Refresh()
+
+		if retApp.opTable.Len() == 0 {
+			for _, action := range retApp.enableOnExistImageEnablables {
+				action.Disable()
+			}
+		} else {
+			for _, action := range retApp.enableOnExistImageEnablables {
+				action.Enable()
+			}
+		}
 	})
 
 	mainWindow.SetOnDropped(func(p fyne.Position, u []fyne.URI) {
@@ -110,14 +121,19 @@ func NewImgpackApp() *ImgpackApp {
 
 	mainWindow.Canvas().SetOnTypedKey(retApp.onTabKey)
 
-	retApp.enableOnSelectImageEnables = []Enablable{}
+	retApp.enableOnExistImageEnablables = []Enablable{}
+	retApp.enableOnSelectImageEnablables = []Enablable{}
 
 	retApp.setupDialogs()
 	retApp.setupMenu()
 	retApp.setupToolbar()
 	retApp.setupContent()
 
-	for _, action := range retApp.enableOnSelectImageEnables {
+	for _, action := range retApp.enableOnSelectImageEnablables {
+		action.Disable()
+	}
+
+	for _, action := range retApp.enableOnExistImageEnablables {
 		action.Disable()
 	}
 
@@ -194,8 +210,8 @@ func (iApp *ImgpackApp) setupMenu() {
 		Icon:   theme.ContentCutIcon(),
 	}
 
-	iApp.enableOnSelectImageEnables = append(
-		iApp.enableOnSelectImageEnables,
+	iApp.enableOnSelectImageEnablables = append(
+		iApp.enableOnSelectImageEnablables,
 		&EnablableWrapMenuItem{addImgsMenuItem},
 		&EnablableWrapMenuItem{delImgsMenuItem},
 		&EnablableWrapMenuItem{dupImgsMenuItem},
@@ -206,23 +222,36 @@ func (iApp *ImgpackApp) setupMenu() {
 		&EnablableWrapMenuItem{cutImgMenuItem},
 	)
 
+	clearMenuItem := &fyne.MenuItem{
+		Label:  "Clear",
+		Icon:   theme.DocumentCreateIcon(),
+		Action: iApp.clearAction,
+	}
+
+	saveAsArchiveMenuItem := &fyne.MenuItem{
+		Label:  "Save As Archive",
+		Icon:   theme.DocumentSaveIcon(),
+		Action: iApp.saveArchiveAction,
+	}
+
+	saveAsPDFMenuItem := &fyne.MenuItem{
+		Label:  "Save As PDF",
+		Icon:   assets.AsPdfIcon,
+		Action: iApp.savePDFAction,
+	}
+
+	iApp.enableOnExistImageEnablables = append(
+		iApp.enableOnExistImageEnablables,
+		&EnablableWrapMenuItem{clearMenuItem},
+		&EnablableWrapMenuItem{saveAsArchiveMenuItem},
+		&EnablableWrapMenuItem{saveAsPDFMenuItem},
+	)
+
 	menu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
-			&fyne.MenuItem{
-				Label:  "Clear",
-				Icon:   theme.DocumentCreateIcon(),
-				Action: iApp.clearAction,
-			},
-			&fyne.MenuItem{
-				Label:  "Save As Archive",
-				Icon:   theme.DocumentSaveIcon(),
-				Action: iApp.saveArchiveAction,
-			},
-			&fyne.MenuItem{
-				Label:  "Save As PDF",
-				Icon:   theme.DocumentSaveIcon(),
-				Action: iApp.savePDFAction,
-			},
+			clearMenuItem,
+			saveAsArchiveMenuItem,
+			saveAsPDFMenuItem,
 			fyne.NewMenuItemSeparator(),
 			&fyne.MenuItem{
 				Label:  "Quit",
@@ -269,8 +298,8 @@ func (iApp *ImgpackApp) setupToolbar() {
 	rotateImgsToolbarAction := widget.NewToolbarAction(theme.MediaReplayIcon(), iApp.rotateAction)
 	cutImgToolbarAction := widget.NewToolbarAction(theme.ContentCutIcon(), iApp.cutAction)
 
-	iApp.enableOnSelectImageEnables = append(
-		iApp.enableOnSelectImageEnables,
+	iApp.enableOnSelectImageEnablables = append(
+		iApp.enableOnSelectImageEnablables,
 		delImgsToolbarAction,
 		dupImgsToolbarAction,
 		moveUpImgsToolbarAction,
@@ -280,10 +309,24 @@ func (iApp *ImgpackApp) setupToolbar() {
 		cutImgToolbarAction,
 	)
 
+	clearToolbarAction := widget.NewToolbarAction(
+		theme.DocumentCreateIcon(), iApp.clearAction)
+	saveArchiveToolbarAction := widget.NewToolbarAction(
+		theme.DocumentSaveIcon(), iApp.saveArchiveAction)
+	savePDFToolbarAction := widget.NewToolbarAction(
+		assets.AsPdfIcon, iApp.savePDFAction)
+
+	iApp.enableOnExistImageEnablables = append(
+		iApp.enableOnExistImageEnablables,
+		clearToolbarAction,
+		saveArchiveToolbarAction,
+		savePDFToolbarAction,
+	)
+
 	iApp.toolbar = widget.NewToolbar(
-		widget.NewToolbarAction(theme.DocumentCreateIcon(), iApp.clearAction),
-		widget.NewToolbarAction(theme.DocumentSaveIcon(), iApp.saveArchiveAction),
-		widget.NewToolbarAction(assets.AsPdfIcon, iApp.savePDFAction),
+		clearToolbarAction,
+		saveArchiveToolbarAction,
+		savePDFToolbarAction,
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
