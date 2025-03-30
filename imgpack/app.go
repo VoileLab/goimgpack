@@ -455,6 +455,10 @@ func (iApp *ImgpackApp) onTabKey(e *fyne.KeyEvent) {
 		} else {
 			iApp.opTable.Select(0)
 		}
+	case fyne.KeyC:
+		iApp.opTable.Cut()
+	case fyne.KeyR:
+		iApp.opTable.Rotate()
 	}
 }
 
