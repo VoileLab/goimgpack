@@ -492,6 +492,7 @@ func (iApp *ImgpackApp) addAction() {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
 		}
+		f.Close()
 
 		iApp.opTable.Insert(imgs...)
 	}, iApp.mainWindow)
