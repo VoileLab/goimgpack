@@ -236,7 +236,7 @@ func (iApp *ImgpackApp) setupMenu() {
 
 	saveAsPDFMenuItem := &fyne.MenuItem{
 		Label:  "Save As PDF",
-		Icon:   assets.AsPdfIcon,
+		Icon:   theme.DocumentSaveIcon(),
 		Action: iApp.savePDFAction,
 	}
 
@@ -313,8 +313,8 @@ func (iApp *ImgpackApp) setupToolbar() {
 		theme.DocumentCreateIcon(), iApp.clearAction)
 	saveArchiveToolbarAction := widget.NewToolbarAction(
 		theme.DocumentSaveIcon(), iApp.saveArchiveAction)
-	savePDFToolbarAction := widget.NewToolbarAction(
-		assets.AsPdfIcon, iApp.savePDFAction)
+	savePDFToolbarAction := NewEnablableWrapToolbarItem(
+		assets.AsPdfIcon, assets.DisabledAsPdfIcon, iApp.savePDFAction)
 
 	iApp.enableOnExistImageEnablables = append(
 		iApp.enableOnExistImageEnablables,
@@ -326,7 +326,7 @@ func (iApp *ImgpackApp) setupToolbar() {
 	iApp.toolbar = widget.NewToolbar(
 		clearToolbarAction,
 		saveArchiveToolbarAction,
-		savePDFToolbarAction,
+		savePDFToolbarAction.ToolbarItem(),
 		widget.NewToolbarSeparator(),
 		addImgsToolbarAction,
 		delImgsToolbarAction,
