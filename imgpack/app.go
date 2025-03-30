@@ -392,6 +392,10 @@ func (iApp *ImgpackApp) showAbout() {
 	iApp.aboutDlg.Show()
 }
 
+func (iApp *ImgpackApp) setState(text string) {
+	iApp.stateBar.SetText(text)
+}
+
 func (iApp *ImgpackApp) dropFiles(files []fyne.URI) {
 	iApp.readingImagesDlg.Show()
 	defer iApp.readingImagesDlg.Hide()
@@ -486,8 +490,8 @@ func (iApp *ImgpackApp) addAction() {
 			return
 		}
 
-		filepath := f.URI().Path()
-		imgs, err := imgutil.ReadImgsInFile(f, path.Base(filepath))
+		filename := path.Base(f.URI().Path())
+		imgs, err := imgutil.ReadImgsInFile(f, filename)
 		if err != nil {
 			dialog.ShowError(err, iApp.mainWindow)
 			return
@@ -495,6 +499,7 @@ func (iApp *ImgpackApp) addAction() {
 		f.Close()
 
 		iApp.opTable.Insert(imgs...)
+		iApp.setState(fmt.Sprintf("Added %d images from %s", len(imgs), filename))
 	}, iApp.mainWindow)
 }
 
@@ -515,7 +520,7 @@ func (iApp *ImgpackApp) downloadAction() {
 		}
 		f.Close()
 
-		iApp.stateBar.SetText("Saved successfully")
+		iApp.setState(fmt.Sprintf("Saved %s successfully", f.URI().Name()))
 	}, iApp.mainWindow)
 }
 
@@ -537,7 +542,7 @@ func (iApp *ImgpackApp) moveDownAction() {
 
 func (iApp *ImgpackApp) saveArchiveAction() {
 	if iApp.opTable.Len() == 0 {
-		iApp.stateBar.SetText("No image to save")
+		iApp.setState("No image to save")
 		return
 	}
 
@@ -555,13 +560,13 @@ func (iApp *ImgpackApp) saveArchiveAction() {
 		}
 		f.Close()
 
-		iApp.stateBar.SetText("Saved successfully")
+		iApp.setState(fmt.Sprintf("Saved %s successfully", f.URI().Name()))
 	}, iApp.mainWindow)
 }
 
 func (iApp *ImgpackApp) savePDFAction() {
 	if iApp.opTable.Len() == 0 {
-		iApp.stateBar.SetText("No image to save")
+		iApp.setState("No image to save")
 		return
 	}
 
@@ -577,7 +582,7 @@ func (iApp *ImgpackApp) savePDFAction() {
 		}
 		f.Close()
 
-		iApp.stateBar.SetText("Saved successfully")
+		iApp.setState(fmt.Sprintf("Saved %s successfully", f.URI().Name()))
 	}, iApp.mainWindow)
 }
 
